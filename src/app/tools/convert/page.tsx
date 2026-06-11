@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
+import { ProcessingIndicator } from "@/components/processing-indicator";
 import { RefreshCw } from "lucide-react";
 
 const formats = [
@@ -64,14 +65,13 @@ export default function ConvertPage() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
           <RefreshCw className="h-7 w-7" />
         </div>
-        <h1 className="mt-4 text-3xl font-bold">Convert Image Format</h1>
-        <p className="mt-2 text-muted-foreground">
-          Convert images between PNG, JPEG, WebP, and AVIF formats instantly.
+        <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Convert Image Format</h1>
+        <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
+          Convert images between PNG, JPEG, WebP, and AVIF formats instantly. Free, no signup.
         </p>
       </div>
 
       <div className="mt-8 space-y-6">
-        {/* Format selector */}
         <div className="flex items-center justify-center gap-3">
           <span className="text-sm text-muted-foreground">Convert to:</span>
           {formats.map((f) => (
@@ -79,9 +79,9 @@ export default function ConvertPage() {
               key={f.value}
               onClick={() => setTargetFormat(f.value)}
               disabled={isProcessing}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              className={`rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
                 targetFormat === f.value
-                  ? "bg-violet-600 text-white"
+                  ? "bg-violet-600 text-white shadow-md"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -90,13 +90,22 @@ export default function ConvertPage() {
           ))}
         </div>
 
-        {!resultUrl && (
-          <ImageUpload onImageSelected={handleImageSelected} isProcessing={isProcessing} />
+        {!resultUrl && !isProcessing && (
+          <ImageUpload onImageSelected={handleImageSelected} isProcessing={false} />
         )}
+
+        <ProcessingIndicator isProcessing={isProcessing} message="Converting your image..." />
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            <p className="font-medium">Conversion failed</p>
+            <p className="mt-1">{error}</p>
+            <button
+              onClick={handleReset}
+              className="mt-2 text-xs font-medium text-red-600 underline hover:text-red-800"
+            >
+              Try again
+            </button>
           </div>
         )}
 
@@ -107,24 +116,37 @@ export default function ConvertPage() {
               resultUrl={resultUrl}
               downloadFilename={`converted.${targetFormat}`}
             />
-            <button
-              onClick={handleReset}
-              className="text-sm text-violet-600 hover:text-violet-700 underline"
-            >
-              Convert another image
-            </button>
+            <div className="text-center">
+              <button
+                onClick={handleReset}
+                className="text-sm text-violet-600 hover:text-violet-700 underline"
+              >
+                Convert another image
+              </button>
+            </div>
           </>
         )}
       </div>
 
-      <div className="mt-16 space-y-6 text-sm text-muted-foreground">
-        <h2 className="text-xl font-semibold text-foreground">Supported Formats</h2>
-        <ul className="list-disc space-y-2 pl-5">
-          <li><strong>PNG</strong> — Lossless, best for graphics and transparent images</li>
-          <li><strong>JPEG</strong> — Best for photos, small file size</li>
-          <li><strong>WebP</strong> — Modern format, great compression and quality</li>
-          <li><strong>AVIF</strong> — Next-gen format, best compression ratio</li>
-        </ul>
+      <div className="mt-16 space-y-8 text-sm text-muted-foreground">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Supported Formats</h2>
+          <ul className="mt-3 list-disc space-y-2 pl-5">
+            <li><strong>PNG</strong> — Lossless, best for graphics and transparent images</li>
+            <li><strong>JPEG</strong> — Best for photos, small file size</li>
+            <li><strong>WebP</strong> — Modern format, great compression and quality</li>
+            <li><strong>AVIF</strong> — Next-gen format, best compression ratio</li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Frequently Asked Questions</h2>
+          <div className="mt-3 space-y-4">
+            <details className="group rounded-lg border border-border p-4">
+              <summary className="cursor-pointer font-medium text-foreground">Will I lose quality converting to JPEG?</summary>
+              <p className="mt-2">JPEG uses lossy compression, so there may be minor quality loss. For best results, convert to PNG (lossless) or WebP (near-lossless).</p>
+            </details>
+          </div>
+        </div>
       </div>
     </div>
   );

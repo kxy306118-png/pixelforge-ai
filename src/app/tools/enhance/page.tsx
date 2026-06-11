@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
+import { ProcessingIndicator } from "@/components/processing-indicator";
 import { Sparkles } from "lucide-react";
 
 export default function EnhancePage() {
@@ -20,24 +21,19 @@ export default function EnhancePage() {
     try {
       const formData = new FormData();
       formData.append("image", file);
+      formData.append("scale", "2");
 
-      const res = await fetch("/api/remove-bg", {
+      const res = await fetch("/api/upscale", {
         method: "POST",
         body: formData,
       });
 
-      // Reusing upscale endpoint for enhance (face_enhance enabled)
-      const upscaleRes = await fetch("/api/upscale", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!upscaleRes.ok) {
-        const data = await upscaleRes.json();
+      if (!res.ok) {
+        const data = await res.json();
         throw new Error(data.error || "Failed to enhance image");
       }
 
-      const blob = await upscaleRes.blob();
+      const blob = await res.blob();
       setResultUrl(URL.createObjectURL(blob));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -58,21 +54,36 @@ export default function EnhancePage() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-600">
           <Sparkles className="h-7 w-7" />
         </div>
-        <h1 className="mt-4 text-3xl font-bold">AI Photo Enhancer</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="mt-4 text-3xl font-bold sm:text-4xl">AI Photo Enhancer</h1>
+        <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
           Restore and enhance old, blurry, or damaged photos with AI-powered face restoration.
         </p>
       </div>
 
       <div className="mt-8 space-y-6">
-        {!resultUrl && (
-          <ImageUpload onImageSelected={handleImageSelected} isProcessing={isProcessing} />
+        {!resultUrl && !isProcessing && (
+          <ImageUpload onImageSelected={handleImageSelected} isProcessing={false} />
         )}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+
+        <ProcessingIndicator isProcessing={isProcessing} message="Enhancing your photo with AI..." />
+
+        {isProcessing && originalUrl && (
+          <div className="flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={originalUrl} alt="Processing" className="max-h-48 rounded-lg opacity-50" />
           </div>
         )}
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p className="font-medium">Enhancement failed</p>
+            <p className="mt-1">{error}</p>
+            <button onClick={handleReset} className="mt-2 text-xs font-medium text-red-600 underline">
+              Try again
+            </button>
+          </div>
+        )}
+
         {resultUrl && (
           <>
             <ResultPreview
@@ -80,12 +91,11 @@ export default function EnhancePage() {
               resultUrl={resultUrl}
               downloadFilename="enhanced.png"
             />
-            <button
-              onClick={handleReset}
-              className="text-sm text-violet-600 hover:text-violet-700 underline"
-            >
-              Enhance another photo
-            </button>
+            <div className="text-center">
+              <button onClick={handleReset} className="text-sm text-violet-600 hover:text-violet-700 underline">
+                Enhance another photo
+              </button>
+            </div>
           </>
         )}
       </div>

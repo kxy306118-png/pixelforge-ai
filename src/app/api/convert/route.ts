@@ -3,6 +3,8 @@ import sharp from "sharp";
 
 export const runtime = "nodejs";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 const outputFormats: Record<string, { format: string; contentType: string; ext: string }> = {
   png: { format: "png", contentType: "image/png", ext: "png" },
   jpeg: { format: "jpeg", contentType: "image/jpeg", ext: "jpg" },
@@ -17,19 +19,33 @@ export async function POST(req: NextRequest) {
     const targetFormat = ((formData.get("format") as string) || "png").toLowerCase();
 
     if (!imageFile) {
-      return NextResponse.json({ error: "No image provided" }, { status: 400 });
+      return NextResponse.json({ error: "No image provided. Please upload an image file." }, { status: 400 });
+    }
+
+    if (!imageFile.type.startsWith("image/")) {
+      return NextResponse.json({ error: "Invalid file type. Please upload an image." }, { status: 400 });
+    }
+
+    if (imageFile.size > MAX_FILE_SIZE) {
+      return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 400 });
     }
 
     const fmt = outputFormats[targetFormat];
     if (!fmt) {
       return NextResponse.json(
-        { error: `Unsupported format: ${targetFormat}. Use: png, jpeg, webp, avif` },
+        { error: `Unsupported format: ${targetFormat}. Supported: png, jpeg, webp, avif` },
         { status: 400 }
       );
     }
 
     const bytes = await imageFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Verify input is valid image
+    const metadata = await sharp(buffer).metadata();
+    if (!metadata.format) {
+      return NextResponse.json({ error: "Could not read image. File may be corrupted." }, { status: 400 });
+    }
 
     let pipeline = sharp(buffer);
     switch (fmt.format) {
@@ -58,6 +74,11 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to convert image";
     console.error("Convert error:", error);
+
+    if (message.includes("unsupported image format") || message.includes("Input buffer contains unsupported image format")) {
+      return NextResponse.json({ error: "Unsupported image format. Please use PNG, JPG, or WebP." }, { status: 400 });
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

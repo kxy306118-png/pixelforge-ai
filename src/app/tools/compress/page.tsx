@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
+import { ProcessingIndicator } from "@/components/processing-indicator";
 import { FileDown } from "lucide-react";
 
 export default function CompressPage() {
@@ -63,9 +64,9 @@ export default function CompressPage() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-600">
           <FileDown className="h-7 w-7" />
         </div>
-        <h1 className="mt-4 text-3xl font-bold">Compress Image</h1>
-        <p className="mt-2 text-muted-foreground">
-          Reduce image file size by up to 90% without losing visible quality. Fast and private.
+        <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Compress Image</h1>
+        <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
+          Reduce image file size by up to 90% without visible quality loss. Fast, free, and private.
         </p>
       </div>
 
@@ -82,16 +83,28 @@ export default function CompressPage() {
             disabled={isProcessing}
             className="w-48 accent-violet-600"
           />
-          <span className="text-sm font-medium w-12">{quality}%</span>
+          <span className="min-w-[3rem] text-sm font-medium">{quality}%</span>
         </div>
+        <p className="text-center text-xs text-muted-foreground">
+          Recommended: 75-85% for photos, 60-70% for thumbnails
+        </p>
 
-        {!resultUrl && (
-          <ImageUpload onImageSelected={handleImageSelected} isProcessing={isProcessing} />
+        {!resultUrl && !isProcessing && (
+          <ImageUpload onImageSelected={handleImageSelected} isProcessing={false} />
         )}
+
+        <ProcessingIndicator isProcessing={isProcessing} message="Compressing your image..." />
 
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            <p className="font-medium">Compression failed</p>
+            <p className="mt-1">{error}</p>
+            <button
+              onClick={handleReset}
+              className="mt-2 text-xs font-medium text-red-600 underline hover:text-red-800"
+            >
+              Try again
+            </button>
           </div>
         )}
 
@@ -104,24 +117,41 @@ export default function CompressPage() {
               resultSize={resultSize}
               downloadFilename="compressed.webp"
             />
-            <button
-              onClick={handleReset}
-              className="text-sm text-violet-600 hover:text-violet-700 underline"
-            >
-              Compress another image
-            </button>
+            <div className="text-center">
+              <button
+                onClick={handleReset}
+                className="text-sm text-violet-600 hover:text-violet-700 underline"
+              >
+                Compress another image
+              </button>
+            </div>
           </>
         )}
       </div>
 
-      <div className="mt-16 space-y-6 text-sm text-muted-foreground">
-        <h2 className="text-xl font-semibold text-foreground">How to Compress Images</h2>
-        <ol className="list-decimal space-y-2 pl-5">
-          <li>Upload your image (PNG, JPG, or WebP)</li>
-          <li>Adjust the quality slider to balance size and quality</li>
-          <li>Your image is compressed to WebP format for maximum efficiency</li>
-          <li>Download the compressed image</li>
-        </ol>
+      <div className="mt-16 space-y-8 text-sm text-muted-foreground">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">How to Compress Images</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5">
+            <li>Upload your image (PNG, JPG, or WebP)</li>
+            <li>Adjust the quality slider to balance size and quality</li>
+            <li>Your image is compressed to WebP format for maximum efficiency</li>
+            <li>See the size savings and download the compressed image</li>
+          </ol>
+        </div>
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Frequently Asked Questions</h2>
+          <div className="mt-3 space-y-4">
+            <details className="group rounded-lg border border-border p-4">
+              <summary className="cursor-pointer font-medium text-foreground">Why does my image become WebP?</summary>
+              <p className="mt-2">WebP provides the best compression ratio while maintaining quality. It&apos;s supported by all modern browsers and is the recommended format for the web.</p>
+            </details>
+            <details className="group rounded-lg border border-border p-4">
+              <summary className="cursor-pointer font-medium text-foreground">Is there a file size limit?</summary>
+              <p className="mt-2">The maximum upload size is 10MB. For larger files, try our Pro plan which supports up to 50MB.</p>
+            </details>
+          </div>
+        </div>
       </div>
     </div>
   );

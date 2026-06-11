@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
+import { ProcessingIndicator } from "@/components/processing-indicator";
 import { Move } from "lucide-react";
 
 export default function ResizePage() {
@@ -17,7 +18,7 @@ export default function ResizePage() {
   const handleImageSelected = useCallback(
     async (file: File) => {
       if (!width && !height) {
-        setError("Please enter at least a width or height");
+        setError("Please enter at least a width or height before uploading");
         return;
       }
 
@@ -66,14 +67,32 @@ export default function ResizePage() {
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
           <Move className="h-7 w-7" />
         </div>
-        <h1 className="mt-4 text-3xl font-bold">Resize Image</h1>
-        <p className="mt-2 text-muted-foreground">
+        <h1 className="mt-4 text-3xl font-bold sm:text-4xl">Resize Image</h1>
+        <p className="mt-2 text-muted-foreground max-w-xl mx-auto">
           Resize images to any dimension. Maintain aspect ratio or crop to exact sizes.
         </p>
       </div>
 
       <div className="mt-8 space-y-6">
-        {/* Resize controls */}
+        {/* Quick presets */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="text-xs text-muted-foreground">Presets:</span>
+          {[
+            { label: "1080p", w: "1920", h: "1080" },
+            { label: "720p", w: "1280", h: "720" },
+            { label: "Square", w: "1024", h: "1024" },
+            { label: "Thumbnail", w: "256", h: "256" },
+          ].map((p) => (
+            <button
+              key={p.label}
+              onClick={() => { setWidth(p.w); setHeight(p.h); }}
+              className="rounded-md border border-border px-2.5 py-1 text-xs font-medium hover:border-violet-300 hover:text-violet-600 transition-colors"
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div className="flex flex-wrap items-end justify-center gap-4">
           <div>
             <label className="block text-sm font-medium text-muted-foreground mb-1">Width (px)</label>
@@ -111,14 +130,22 @@ export default function ResizePage() {
           </div>
         </div>
 
-        {!resultUrl && (
-          <ImageUpload onImageSelected={handleImageSelected} isProcessing={isProcessing} />
+        {!resultUrl && !isProcessing && (
+          <ImageUpload onImageSelected={handleImageSelected} isProcessing={false} />
         )}
+
+        <ProcessingIndicator isProcessing={isProcessing} message="Resizing your image..." />
+
         {error && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+            <p className="font-medium">Resize failed</p>
+            <p className="mt-1">{error}</p>
+            <button onClick={handleReset} className="mt-2 text-xs font-medium text-red-600 underline">
+              Try again
+            </button>
           </div>
         )}
+
         {resultUrl && (
           <>
             <ResultPreview
@@ -126,12 +153,11 @@ export default function ResizePage() {
               resultUrl={resultUrl}
               downloadFilename={`resized-${width || "auto"}x${height || "auto"}.webp`}
             />
-            <button
-              onClick={handleReset}
-              className="text-sm text-violet-600 hover:text-violet-700 underline"
-            >
-              Resize another image
-            </button>
+            <div className="text-center">
+              <button onClick={handleReset} className="text-sm text-violet-600 hover:text-violet-700 underline">
+                Resize another image
+              </button>
+            </div>
           </>
         )}
       </div>
