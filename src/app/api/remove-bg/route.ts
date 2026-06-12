@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     // Give user-friendly error messages
     if (message.includes("401") || message.includes("Unauthorized")) {
       return NextResponse.json(
-        { error: "AI service is temporarily unavailable. Please try again later." },
+        { error: "AI service is currently unavailable." },
         { status: 503 }
       );
     }
