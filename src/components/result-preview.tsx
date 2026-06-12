@@ -11,185 +11,94 @@ interface ResultPreviewProps {
   downloadFilename?: string;
 }
 
-export function ResultPreview({
-  originalUrl,
-  resultUrl,
-  originalSize,
-  resultSize,
-  downloadFilename = "result.png",
-}: ResultPreviewProps) {
+function fmt(bytes: number) {
+  return bytes >= 1048576 ? (bytes / 1048576).toFixed(2) + " MB" : (bytes / 1024).toFixed(1) + " KB";
+}
+
+export function ResultPreview({ originalUrl, resultUrl, originalSize, resultSize, downloadFilename = "result.png" }: ResultPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [sliderPos, setSliderPos] = useState(50);
   const [viewMode, setViewMode] = useState<"slider" | "side">("slider");
 
-  const reduction =
-    originalSize && resultSize
-      ? ((1 - resultSize / originalSize) * 100).toFixed(1)
-      : null;
+  const reduction = originalSize && resultSize ? ((1 - resultSize / originalSize) * 100).toFixed(1) : null;
 
   const handleMove = useCallback((clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const pct = Math.max(0, Math.min(100, (x / rect.width) * 100));
-    setSliderPos(pct);
+    setSliderPos(Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100)));
   }, []);
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX);
-    const handleTouchMove = (e: TouchEvent) => handleMove(e.touches[0].clientX);
-    const container = containerRef.current;
-    if (!container) return;
-    container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("touchmove", handleTouchMove);
-    return () => {
-      container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("touchmove", handleTouchMove);
-    };
+    const mm = (e: MouseEvent) => handleMove(e.clientX);
+    const tm = (e: TouchEvent) => handleMove(e.touches[0].clientX);
+    const c = containerRef.current;
+    if (!c) return;
+    c.addEventListener("mousemove", mm);
+    c.addEventListener("touchmove", tm);
+    return () => { c.removeEventListener("mousemove", mm); c.removeEventListener("touchmove", tm); };
   }, [handleMove]);
 
   if (!resultUrl) return null;
 
   return (
-    <div className="w-full space-y-4">
-      {/* Stats bar */}
+    <div className="w-full space-y-5">
+      {/* Stats */}
       {(originalSize || resultSize) && (
-        <div className="flex flex-wrap items-center gap-4 rounded-xl bg-muted/50 p-4 text-sm">
-          {originalSize && (
-            <div>
-              <span className="text-muted-foreground">Original: </span>
-              <span className="font-semibold">
-                {originalSize >= 1048576
-                  ? (originalSize / 1048576).toFixed(2) + " MB"
-                  : (originalSize / 1024).toFixed(1) + " KB"}
-              </span>
-            </div>
-          )}
-          {resultSize && (
-            <div>
-              <span className="text-muted-foreground">Result: </span>
-              <span className="font-semibold">
-                {resultSize >= 1048576
-                  ? (resultSize / 1048576).toFixed(2) + " MB"
-                  : (resultSize / 1024).toFixed(1) + " KB"}
-              </span>
-            </div>
-          )}
-          {reduction && parseFloat(reduction) > 0 && (
-            <div>
-              <span className="text-muted-foreground">Saved: </span>
-              <span className="font-semibold text-green-600">{reduction}%</span>
-            </div>
-          )}
-          {reduction && parseFloat(reduction) < 0 && (
-            <div>
-              <span className="text-muted-foreground">Size change: </span>
-              <span className="font-semibold text-amber-600">+{Math.abs(parseFloat(reduction))}%</span>
-            </div>
-          )}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4 text-sm">
+          {originalSize && <div><span className="text-zinc-500">Original: </span><span className="font-semibold text-zinc-200">{fmt(originalSize)}</span></div>}
+          {resultSize && <div><span className="text-zinc-500">Result: </span><span className="font-semibold text-zinc-200">{fmt(resultSize)}</span></div>}
+          {reduction && parseFloat(reduction) > 0 && <div><span className="text-zinc-500">Saved: </span><span className="font-semibold text-emerald-400">{reduction}%</span></div>}
+          {reduction && parseFloat(reduction) < 0 && <div><span className="text-zinc-500">Size: </span><span className="font-semibold text-amber-400">+{Math.abs(parseFloat(reduction))}%</span></div>}
         </div>
       )}
 
-      {/* View mode toggle */}
+      {/* View toggle */}
       <div className="flex justify-center gap-2">
-        <button
-          onClick={() => setViewMode("slider")}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            viewMode === "slider"
-              ? "bg-violet-600 text-white"
-              : "bg-muted text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Before / After Slider
-        </button>
-        <button
-          onClick={() => setViewMode("side")}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            viewMode === "side"
-              ? "bg-violet-600 text-white"
-              : "bg-muted text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Side by Side
-        </button>
+        {(["slider", "side"] as const).map((m) => (
+          <button key={m} onClick={() => setViewMode(m)}
+            className={`rounded-lg px-4 py-2 text-xs font-medium transition-all duration-200 ${
+              viewMode === m ? "bg-violet-500/20 text-violet-400 border border-violet-500/30" : "border border-white/[0.06] text-zinc-500 hover:text-zinc-300"
+            }`}>
+            {m === "slider" ? "Before / After" : "Side by Side"}
+          </button>
+        ))}
       </div>
 
-      {/* Image comparison */}
+      {/* Comparison */}
       {viewMode === "slider" && originalUrl ? (
-        <div
-          ref={containerRef}
-          className="relative overflow-hidden rounded-xl border border-border cursor-ew-resize select-none"
-        >
-          {/* Result (bottom layer) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={resultUrl}
-            alt="Result"
-            className="w-full block"
-            draggable={false}
-          />
-          {/* Original (top layer, clipped) */}
-          <div
-            className="absolute inset-0 overflow-hidden"
-            style={{ width: `${sliderPos}%` }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={originalUrl}
-              alt="Original"
-              className="block"
-              style={{ width: containerRef.current?.offsetWidth || "100%" }}
-              draggable={false}
-            />
+        <div ref={containerRef} className="relative overflow-hidden rounded-2xl border border-white/[0.06] cursor-ew-resize select-none">
+          <img src={resultUrl} alt="Result" className="w-full block" draggable={false} />
+          <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPos}%` }}>
+            <img src={originalUrl} alt="Original" className="block" style={{ width: containerRef.current?.offsetWidth || "100%" }} draggable={false} />
           </div>
-          {/* Slider line */}
-          <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white shadow-lg"
-            style={{ left: `${sliderPos}%` }}
-          >
-            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md">
-              <ChevronLeft className="h-3 w-3 text-gray-500" />
-              <ChevronRight className="h-3 w-3 text-gray-500" />
+          <div className="absolute top-0 bottom-0 w-0.5 bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.3)]" style={{ left: `${sliderPos}%` }}>
+            <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-lg">
+              <ChevronLeft className="h-3 w-3 text-zinc-600" /><ChevronRight className="h-3 w-3 text-zinc-600" />
             </div>
           </div>
-          {/* Labels */}
-          <span className="absolute top-3 left-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white">
-            Before
-          </span>
-          <span className="absolute top-3 right-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white">
-            After
-          </span>
+          <span className="absolute top-3 left-3 rounded-lg bg-black/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/70">Before</span>
+          <span className="absolute top-3 right-3 rounded-lg bg-violet-500/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-white">After</span>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {originalUrl && (
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Before</p>
-              <div className="overflow-hidden rounded-xl border border-border bg-muted/30">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={originalUrl} alt="Original" className="w-full object-contain" />
-              </div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Before</p>
+              <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-white/[0.02]"><img src={originalUrl} alt="Original" className="w-full object-contain" /></div>
             </div>
           )}
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">After</p>
-            <div className="overflow-hidden rounded-xl border border-violet-200 bg-muted/30">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={resultUrl} alt="Result" className="w-full object-contain" />
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-violet-400">After</p>
+            <div className="overflow-hidden rounded-xl border border-violet-500/20 bg-white/[0.02] shadow-[0_0_20px_rgba(139,92,246,0.1)]"><img src={resultUrl} alt="Result" className="w-full object-contain" /></div>
           </div>
         </div>
       )}
 
-      {/* Download button */}
-      <div className="flex justify-center">
-        <a
-          href={resultUrl}
-          download={downloadFilename}
-          className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-8 py-3 font-medium text-white hover:bg-violet-700 transition-colors shadow-md"
-        >
-          <Download className="h-4 w-4" />
-          Download Result
+      {/* Download */}
+      <div className="flex justify-center pt-2">
+        <a href={resultUrl} download={downloadFilename}
+          className="neon-btn px-8 py-3.5 text-sm">
+          <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download Result</span>
         </a>
       </div>
     </div>

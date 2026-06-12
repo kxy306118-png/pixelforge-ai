@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
@@ -19,7 +18,7 @@ export default function EnhancePage() {
       const fd = new FormData(); fd.append("image", file);
       const res = await fetch("/api/upscale", { method: "POST", body: fd });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
-      const blob = await res.blob(); setResultUrl(URL.createObjectURL(blob));
+      setResultUrl(URL.createObjectURL(await res.blob()));
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Error"); }
     finally { setIsProcessing(false); }
   }, []);
@@ -27,56 +26,42 @@ export default function EnhancePage() {
   const handleReset = () => { setOriginalUrl(null); setResultUrl(null); setError(null); };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-8">
-        <div>
-          <div className="text-center animate-fade-in-up">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600"><Sparkles className="h-7 w-7" /></div>
-            <h1 className="mt-4 text-2xl font-bold sm:text-3xl">AI Image Enhance</h1>
-            <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-              Automatically fix colors, brightness, and sharpness with AI.
-            </p>
-          </div>
-
-          <div className="mt-6 sm:mt-8 space-y-6">
-            {!resultUrl && !isProcessing && <div className="animate-scale-in"><ImageUpload onImageSelected={handleImageSelected} isProcessing={false} /></div>}
-            <ProcessingIndicator isProcessing={isProcessing} message="Enhancing with AI..." />
-            {isProcessing && originalUrl && (
-              <div className="flex justify-center animate-fade-in"><img src={originalUrl} alt="Processing" className="max-h-48 rounded-lg opacity-50" /></div>
-            )}
-            {error && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-scale-in">
-                <p className="font-semibold">Enhancement failed</p><p className="mt-1 text-xs">{error}</p>
-                <button onClick={handleReset} className="mt-2 text-xs font-semibold text-red-600 underline">Try again</button>
+    <div className="relative min-h-screen grid-bg">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgba(236,72,153,0.08),transparent)]" />
+      <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
+        <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-10">
+          <div>
+            <div className="text-center animate-fade-in-up">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-[0_0_20px_rgba(236,72,153,0.3)]">
+                <Sparkles className="h-7 w-7" />
               </div>
-            )}
-            {resultUrl && (
-              <div className="animate-fade-in-up space-y-4">
-                <ResultPreview originalUrl={originalUrl} resultUrl={resultUrl} downloadFilename="enhanced.png" />
-                <div className="text-center"><button onClick={handleReset} className="text-sm text-violet-600 underline font-medium">Enhance another</button></div>
-              </div>
-            )}
+              <h1 className="mt-5 text-2xl sm:text-4xl font-black">AI <span className="gradient-text">Enhance</span></h1>
+              <p className="mt-2 text-sm sm:text-base text-zinc-500 max-w-lg mx-auto">Auto-fix colors, brightness, and sharpness with AI.</p>
+            </div>
+            <div className="mt-8 space-y-6">
+              {!resultUrl && !isProcessing && <div className="animate-scale-in"><ImageUpload onImageSelected={handleImageSelected} isProcessing={false} /></div>}
+              <ProcessingIndicator isProcessing={isProcessing} message="Enhancing with AI..." />
+              {isProcessing && originalUrl && <div className="flex justify-center animate-fade-in"><img src={originalUrl} alt="Processing" className="max-h-48 rounded-xl opacity-40" /></div>}
+              {error && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-5 text-center animate-scale-in">
+                  <p className="text-sm font-semibold text-red-400">Failed</p>
+                  <p className="mt-1 text-xs text-red-400/70">{error}</p>
+                  <button onClick={handleReset} className="mt-3 text-xs font-semibold text-red-400 underline">Try again</button>
+                </div>
+              )}
+              {resultUrl && (
+                <div className="animate-fade-in-up space-y-4">
+                  <ResultPreview originalUrl={originalUrl} resultUrl={resultUrl} downloadFilename="enhanced.png" />
+                  <div className="text-center"><button onClick={handleReset} className="text-sm text-violet-400 underline font-medium">Enhance another</button></div>
+                </div>
+              )}
+            </div>
+            <div className="mt-8 lg:hidden ad-slot h-[90px] rounded-2xl"><span>Ad</span></div>
           </div>
-
-          <div className="mt-8 lg:hidden"><div className="ad-container ad-container-banner rounded-2xl"><p className="text-xs text-muted-foreground/40 py-6">Advertisement</p></div></div>
-
-          <div className="mt-10 space-y-4 text-sm text-muted-foreground">
-            <h2 className="text-lg font-semibold text-foreground">FAQ</h2>
-            {[
-              { q: "What does AI Enhance do?", a: "It automatically adjusts brightness, contrast, saturation, and sharpness to make your photos look their best." },
-              { q: "Does it change the resolution?", a: "Enhance improves visual quality without changing dimensions. For resolution increase, use AI Upscale." },
-            ].map((f, i) => (
-              <details key={i} className="rounded-xl border border-border/60 p-4 hover:border-violet-200 transition-colors">
-                <summary className="cursor-pointer font-medium text-foreground text-sm">{f.q}</summary>
-                <p className="mt-2 text-xs leading-relaxed">{f.a}</p>
-              </details>
-            ))}
-          </div>
+          <aside className="hidden lg:block"><div className="sticky top-24 space-y-5">
+            <div className="ad-slot h-[250px] rounded-2xl"><span>Ad</span></div>
+          </div></aside>
         </div>
-
-        <aside className="hidden lg:block"><div className="sticky top-24 space-y-6">
-          <div className="ad-container ad-container-sidebar rounded-2xl"><p className="text-xs text-muted-foreground/40 py-20">Advertisement</p></div>
-        </div></aside>
       </div>
     </div>
   );

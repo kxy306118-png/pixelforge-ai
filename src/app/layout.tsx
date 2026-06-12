@@ -16,37 +16,25 @@ export const metadata: Metadata = {
     template: "%s | PixelForge AI",
   },
   description:
-    "Free AI-powered image tools. Remove backgrounds, upscale photos, compress images, convert formats, and more — all in your browser. No signup required.",
+    "Free AI-powered image tools. Remove backgrounds, upscale photos, compress images — all in your browser. No signup required.",
   keywords: [
     "remove background", "image upscale", "compress image", "convert image",
     "AI image tools", "free image editor", "background remover", "image resize",
   ],
-  openGraph: {
-    type: "website",
-    locale: "en_US",
-    siteName: "PixelForge AI",
-    title: "PixelForge AI — Free AI Image Tools",
-    description: "Remove backgrounds, upscale photos, compress images, and more — all powered by AI.",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "PixelForge AI — Free AI Image Tools",
-    description: "Remove backgrounds, upscale, compress images with AI. Free, no signup.",
-  },
-  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={geistSans.variable}>
+    <html lang="en" className={`${geistSans.variable} dark`}>
       <head>
-        {/* Google AdSense — replace with your actual publisher ID */}
-        {/* <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossOrigin="anonymous" /> */}
+        {/* Google AdSense — uncomment and add your publisher ID
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossOrigin="anonymous" />
+        */}
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-screen bg-[#06060a] text-zinc-200 antialiased">
         <div className="flex min-h-screen flex-col">
           <Header />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 pt-16">{children}</main>
           <Footer />
         </div>
       </body>
