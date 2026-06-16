@@ -1,83 +1,100 @@
 export const siteConfig = {
   name: "PixelForge AI",
-  description: "Free AI-powered image tools — remove backgrounds, upscale, compress, and convert images instantly in your browser.",
+  description: "All-in-one AI-powered creative toolkit — image, video, audio & text tools for everyone.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://pixelforge.ai",
   ogImage: "/og-image.png",
 };
 
-export const tools = [
-  {
-    id: "remove-bg",
-    name: "Remove Background",
-    description: "Remove image backgrounds instantly with AI. Get clean, transparent PNGs in seconds.",
-    icon: "Eraser",
-    href: "/tools/remove-bg",
-    badge: "AI",
-    popular: true,
-    metaTitle: "Free AI Background Remover — Remove Image Backgrounds Online",
-    metaDescription: "Remove backgrounds from images instantly with AI. Free, no signup required. Download transparent PNG in seconds.",
-    keywords: ["remove background", "background remover", "AI background removal", "transparent background", "remove bg"],
-  },
-  {
-    id: "upscale",
-    name: "AI Upscale",
-    description: "Enhance and upscale images up to 4x with AI. Fix blurry and low-resolution photos.",
-    icon: "Maximize",
-    href: "/tools/upscale",
-    badge: "AI",
-    popular: true,
-    metaTitle: "Free AI Image Upscaler — Enhance & Enlarge Photos Online",
-    metaDescription: "Upscale images up to 4x with AI. Fix blurry, pixelated, and low-resolution photos. Free to try, no signup.",
-    keywords: ["image upscaler", "AI upscale", "enhance image", "increase resolution", "upscale photo"],
-  },
-  {
-    id: "compress",
-    name: "Compress Image",
-    description: "Reduce image file size by up to 90% without losing quality. Fast and private.",
-    icon: "FileDown",
-    href: "/tools/compress",
-    badge: "Free",
-    popular: true,
-    metaTitle: "Free Image Compressor — Reduce Image Size Without Quality Loss",
-    metaDescription: "Compress images by up to 90% without visible quality loss. Free, fast, and private. No upload limits.",
-    keywords: ["image compressor", "compress image", "reduce image size", "optimize image", "shrink image"],
-  },
-  {
-    id: "convert",
-    name: "Convert Format",
-    description: "Convert images between PNG, JPEG, WebP, AVIF, and more. Batch conversion supported.",
-    icon: "RefreshCw",
-    href: "/tools/convert",
-    badge: "Free",
-    popular: false,
-    metaTitle: "Free Image Format Converter — PNG, JPG, WebP, AVIF Converter",
-    metaDescription: "Convert images between PNG, JPEG, WebP, AVIF and more formats instantly. Free, no signup required.",
-    keywords: ["image converter", "png to jpg", "webp converter", "format converter", "image format"],
-  },
-  {
-    id: "enhance",
-    name: "AI Enhance",
-    description: "Restore and enhance old, blurry, or damaged photos with AI-powered face restoration.",
-    icon: "Sparkles",
-    href: "/tools/enhance",
-    badge: "AI",
-    popular: false,
-    metaTitle: "AI Photo Enhancer — Fix Blurry & Old Photos Online",
-    metaDescription: "Enhance and restore old, blurry, or damaged photos with AI. Fix faces, sharpen details, and improve quality.",
-    keywords: ["photo enhancer", "AI enhance", "fix blurry photo", "restore old photo", "photo restoration"],
-  },
-  {
-    id: "resize",
-    name: "Resize Image",
-    description: "Resize images to any dimension. Maintain aspect ratio or crop to exact sizes.",
-    icon: "Move",
-    href: "/tools/resize",
-    badge: "Free",
-    popular: false,
-    metaTitle: "Free Image Resizer — Resize Photos to Any Size Online",
-    metaDescription: "Resize images to any dimension instantly. Maintain aspect ratio, crop, or set exact pixel sizes. Free.",
-    keywords: ["image resizer", "resize image", "resize photo", "image dimensions", "crop image"],
-  },
-] as const;
+export type ToolCategory = "image" | "video" | "audio" | "text";
 
-export type Tool = (typeof tools)[number];
+export interface Tool {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  href: string;
+  category: ToolCategory;
+  ai: boolean;
+  costPerRun: number;
+}
+
+export const tools: Tool[] = [
+  // === Image Tools ===
+  { id: "remove-bg", name: "AI Background Removal", description: "Remove image backgrounds instantly with AI. One click, perfect cutout.", icon: "Eraser", href: "/tools/remove-bg", category: "image", ai: true, costPerRun: 0.0003 },
+  { id: "upscale", name: "AI Image Upscale", description: "Upscale images up to 4x with AI. No quality loss.", icon: "Maximize", href: "/tools/upscale", category: "image", ai: true, costPerRun: 0.002 },
+  { id: "enhance", name: "AI Photo Enhance", description: "Enhance photo quality, fix blur, and improve details.", icon: "Sparkles", href: "/tools/enhance", category: "image", ai: true, costPerRun: 0.004 },
+  { id: "ai-image-gen", name: "AI Image Generator", description: "Generate stunning images from text descriptions using Flux AI.", icon: "Wand2", href: "/tools/ai-image-gen", category: "image", ai: true, costPerRun: 0.015 },
+  { id: "compress", name: "Image Compress", description: "Reduce file size without visible quality loss. Smart compression.", icon: "FileDown", href: "/tools/compress", category: "image", ai: false, costPerRun: 0 },
+  { id: "convert", name: "Format Converter", description: "Convert between PNG, JPG, WebP, AVIF instantly.", icon: "RefreshCw", href: "/tools/convert", category: "image", ai: false, costPerRun: 0 },
+  { id: "resize", name: "Image Resize", description: "Resize images to any dimension with presets for social media.", icon: "Move", href: "/tools/resize", category: "image", ai: false, costPerRun: 0 },
+  // === Video Tools ===
+  { id: "text-to-video", name: "Text to Video", description: "Generate short videos from text prompts using AI.", icon: "Video", href: "/tools/text-to-video", category: "video", ai: true, costPerRun: 0.10 },
+  { id: "image-to-video", name: "Image to Video", description: "Animate a static image into a short video clip.", icon: "Film", href: "/tools/image-to-video", category: "video", ai: true, costPerRun: 0.09 },
+  { id: "video-subtitle", name: "Auto Subtitles", description: "Automatically generate subtitles for your videos.", icon: "Subtitles", href: "/tools/video-subtitle", category: "video", ai: true, costPerRun: 0.003 },
+  // === Audio Tools ===
+  { id: "speech-to-text", name: "Speech to Text", description: "Transcribe audio and video files to text with Whisper AI.", icon: "Mic", href: "/tools/speech-to-text", category: "audio", ai: true, costPerRun: 0.003 },
+  { id: "text-to-speech", name: "Text to Speech", description: "Convert text to natural-sounding speech in multiple languages.", icon: "Volume2", href: "/tools/text-to-speech", category: "audio", ai: true, costPerRun: 0.005 },
+  { id: "audio-enhance", name: "Audio Enhance", description: "Remove background noise and enhance audio quality.", icon: "Headphones", href: "/tools/audio-enhance", category: "audio", ai: true, costPerRun: 0.01 },
+  // === Text Tools ===
+  { id: "image-to-text", name: "Image to Text (OCR)", description: "Extract text from images and screenshots accurately.", icon: "ScanText", href: "/tools/image-to-text", category: "text", ai: true, costPerRun: 0.003 },
+  { id: "ai-writer", name: "AI Copywriter", description: "Generate marketing copy, captions, and product descriptions.", icon: "PenTool", href: "/tools/ai-writer", category: "text", ai: true, costPerRun: 0.002 },
+];
+
+export const categoryInfo: Record<ToolCategory, { label: string; icon: string; color: string }> = {
+  image: { label: "Image Tools", icon: "ImageIcon", color: "violet" },
+  video: { label: "Video Tools", icon: "Video", color: "blue" },
+  audio: { label: "Audio Tools", icon: "Volume2", color: "emerald" },
+  text: { label: "Text Tools", icon: "Type", color: "amber" },
+};
+
+export const navLinks = [
+  { href: "/tools", label: "Tools" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/docs", label: "Help" },
+  { href: "/about", label: "About" },
+  { href: "/blog", label: "Blog" },
+  { href: "/contact", label: "Contact" },
+];
+
+export const languages = [
+  { code: "en", label: "English", flag: "🇺🇸" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+];
+
+export interface Plan {
+  id: string;
+  name: string;
+  price: string;
+  period: string;
+  aiCredits: number;
+  popular?: boolean;
+  features: string[];
+}
+
+export const plans: Plan[] = [
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    aiCredits: 5, // lifetime total
+    features: ["5 AI tasks total", "Basic tools (compress/convert/resize) unlimited", "Max 10MB per file", "Standard speed"],
+  },
+  {
+    id: "starter",
+    name: "Starter",
+    price: "$4.99",
+    period: "/mo",
+    aiCredits: 50,
+    features: ["50 AI tasks / month", "All tools included", "Max 25MB per file", "Priority speed", "No watermark", "Ad-free"],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "$9.99",
+    period: "/mo",
+    aiCredits: 150,
+    popular: true,
+    features: ["150 AI tasks / month", "All tools included", "Max 50MB per file", "Priority queue", "Batch processing", "No watermark", "Ad-free", "Email support"],
+  },
+];

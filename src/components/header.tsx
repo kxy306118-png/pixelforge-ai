@@ -1,80 +1,146 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ImageIcon, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import { Menu, X, Globe, ChevronDown, LayoutDashboard, LogOut, Zap, ImageIcon } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
+
+const navKeys = [
+  { href: "/tools", labelKey: "nav.tools" },
+  { href: "/pricing", labelKey: "nav.pricing" },
+  { href: "/docs", labelKey: "nav.help" },
+  { href: "/about", labelKey: "nav.about" },
+  { href: "/blog", labelKey: "nav.blog" },
+  { href: "/contact", labelKey: "nav.contact" },
+];
 
 export function Header() {
-  const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const { data: session } = useSession();
+  const { lang, setLang, t } = useI18n();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const langRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", fn, { passive: true });
-    return () => window.removeEventListener("scroll", fn);
+    const handler = (e: MouseEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) setLangOpen(false);
+      if (userRef.current && !userRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const langLabel = lang === "zh" ? "🇨🇳 中文" : "🇺🇸 English";
+
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-      scrolled
-        ? "bg-[#06060a]/80 backdrop-blur-xl border-b border-white/[0.04] shadow-[0_1px_40px_rgba(0,0,0,0.5)]"
-        : "bg-transparent"
-    }`}>
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group" onClick={() => setOpen(false)}>
-          <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-600 to-blue-500 shadow-[0_0_15px_rgba(139,92,246,0.4)] group-hover:shadow-[0_0_25px_rgba(139,92,246,0.6)] transition-shadow">
-            <ImageIcon className="h-4.5 w-4.5 text-white" />
+    <header className="sticky top-0 z-50 border-b border-[#2a2a45] bg-[#0a0a12]/90 backdrop-blur-xl">
+      <div className="mx-auto max-w-6xl px-5 flex items-center justify-between h-14">
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-purple-600">
+            <ImageIcon className="h-4 w-4 text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight">
-            Pixel<span className="gradient-text">Forge</span>
+          <span className="text-lg font-black text-[#e8e8f0]">
+            Pixel<span className="text-violet-400">Forge</span>
           </span>
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
-          {[
-            { href: "/tools", label: "Tools" },
-            { href: "/pricing", label: "Pricing" },
-          ].map((l) => (
-            <Link key={l.href} href={l.href}
-              className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-all duration-200">
-              {l.label}
+          {navKeys.map((link) => (
+            <Link key={link.href} href={link.href} className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${pathname === link.href ? "text-violet-400 bg-violet-500/10" : "text-[#8888a0] hover:text-[#e8e8f0] hover:bg-white/5"}`}>
+              {t(link.labelKey)}
             </Link>
           ))}
         </nav>
 
-        {/* Desktop CTA */}
-        <Link href="/tools/remove-bg" className="hidden md:inline-flex neon-btn px-5 py-2.5 text-sm">
-          <span className="flex items-center gap-1.5">Try Free →</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Language */}
+          <div ref={langRef} className="relative">
+            <button onClick={() => setLangOpen(!langOpen)} className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-sm text-[#8888a0] hover:text-[#e8e8f0] hover:bg-white/5">
+              <Globe className="h-4 w-4" />
+              <span className="hidden sm:inline text-xs">{langLabel}</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+            {langOpen && (
+              <div className="absolute right-0 mt-1 w-36 rounded-xl border border-[#2a2a45] bg-[#12121e] shadow-2xl py-1 z-50">
+                <button onClick={() => { setLang("en"); setLangOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 ${lang === "en" ? "text-violet-400 bg-violet-500/10" : "text-[#8888a0]"}`}>
+                  🇺🇸 English
+                </button>
+                <button onClick={() => { setLang("zh"); setLangOpen(false); }} className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 ${lang === "zh" ? "text-violet-400 bg-violet-500/10" : "text-[#8888a0]"}`}>
+                  🇨🇳 中文
+                </button>
+              </div>
+            )}
+          </div>
 
-        {/* Mobile toggle */}
-        <button onClick={() => setOpen(!open)} className="md:hidden flex items-center justify-center h-10 w-10 rounded-xl hover:bg-white/[0.04] transition-colors" aria-label="Menu">
-          {open ? <X className="h-5 w-5 text-zinc-300" /> : <Menu className="h-5 w-5 text-zinc-300" />}
-        </button>
-      </div>
+          {/* User Menu */}
+          {session?.user ? (
+            <div ref={userRef} className="relative">
+              <button onClick={() => setUserMenuOpen(!userMenuOpen)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm hover:bg-white/5 border border-[#2a2a45]">
+                <div className="h-6 w-6 rounded-full bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                  {session.user.name?.charAt(0).toUpperCase()}
+                </div>
+                <span className="hidden sm:block text-[#e8e8f0] font-medium max-w-[100px] truncate">{session.user.name}</span>
+                <ChevronDown className="h-3 w-3 text-[#8888a0]" />
+              </button>
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-1 w-52 rounded-xl border border-[#2a2a45] bg-[#12121e] shadow-2xl py-1 z-50">
+                  <div className="px-3 py-2 border-b border-[#2a2a45]">
+                    <p className="text-sm font-bold text-[#e8e8f0]">{session.user.name}</p>
+                    <p className="text-xs text-[#8888a0]">{session.user.email}</p>
+                    <span className="inline-block mt-1 rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-bold text-violet-400 uppercase">{(session.user as any).plan || "free"}</span>
+                  </div>
+                  <Link href="/dashboard" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 text-sm text-[#8888a0] hover:text-[#e8e8f0] hover:bg-white/5">
+                    <LayoutDashboard className="h-4 w-4" /> {t("nav.dashboard")}
+                  </Link>
+                  <button onClick={() => { setUserMenuOpen(false); signOut({ callbackUrl: "/" }); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-white/5">
+                    <LogOut className="h-4 w-4" /> {t("nav.signout")}
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link href="/login" className="hidden sm:block px-3 py-1.5 rounded-lg text-sm font-medium text-[#8888a0] hover:text-[#e8e8f0] hover:bg-white/5">{t("nav.signin")}</Link>
+              <Link href="/signup" className="hidden sm:flex items-center gap-1 px-4 py-1.5 rounded-lg text-sm font-bold bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-[0_0_12px_rgba(124,58,237,0.3)]">
+                <Zap className="h-3.5 w-3.5" /> {t("nav.signup")}
+              </Link>
+            </>
+          )}
 
-      {/* Mobile menu */}
-      <div className={`md:hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden ${
-        open ? "max-h-72 opacity-100" : "max-h-0 opacity-0"
-      }`}>
-        <div className="px-4 pb-4 space-y-1 bg-[#06060a]/95 backdrop-blur-xl border-t border-white/[0.04]">
-          {[
-            { href: "/tools", label: "Tools" },
-            { href: "/pricing", label: "Pricing" },
-          ].map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setOpen(false)}
-              className="block px-4 py-3 rounded-xl text-sm text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors">
-              {l.label}
-            </Link>
-          ))}
-          <Link href="/tools/remove-bg" onClick={() => setOpen(false)}
-            className="block mt-2 rounded-xl neon-btn px-4 py-3 text-center text-sm">
-            <span>Try Free — Remove Background</span>
-          </Link>
+          <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-1.5 rounded-lg text-[#8888a0] hover:text-[#e8e8f0] hover:bg-white/5">
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
+
+      {mobileOpen && (
+        <div className="md:hidden border-t border-[#2a2a45] bg-[#0a0a12] px-5 pb-4">
+          <nav className="flex flex-col gap-1 pt-3">
+            {navKeys.map((link) => (
+              <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className={`px-3 py-2 rounded-lg text-sm font-medium ${pathname === link.href ? "text-violet-400 bg-violet-500/10" : "text-[#8888a0]"}`}>
+                {t(link.labelKey)}
+              </Link>
+            ))}
+            <hr className="border-[#2a2a45] my-2" />
+            {session?.user ? (
+              <>
+                <Link href="/dashboard" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-lg text-sm text-[#8888a0]">📊 {t("nav.dashboard")}</Link>
+                <button onClick={() => { setMobileOpen(false); signOut({ callbackUrl: "/" }); }} className="px-3 py-2 rounded-lg text-sm text-red-400 text-left">{t("nav.signout")}</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" onClick={() => setMobileOpen(false)} className="px-3 py-2 rounded-lg text-sm text-[#8888a0]">{t("nav.signin")}</Link>
+                <Link href="/signup" onClick={() => setMobileOpen(false)} className="btn-primary text-sm justify-center mt-1">{t("nav.signup")}</Link>
+              </>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

@@ -1,41 +1,75 @@
 import Link from "next/link";
 
+const footerSections = [
+  {
+    title: "Product",
+    links: [
+      { href: "/tools", label: "All Tools" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/docs", label: "API Docs" },
+      { href: "/tools?cat=image", label: "Image Tools" },
+      { href: "/tools?cat=video", label: "Video Tools" },
+      { href: "/tools?cat=audio", label: "Audio Tools" },
+      { href: "/tools?cat=text", label: "Text Tools" },
+    ],
+  },
+  {
+    title: "Company",
+    links: [
+      { href: "/about", label: "About Us" },
+      { href: "/blog", label: "Blog" },
+      { href: "/contact", label: "Contact" },
+    ],
+  },
+  {
+    title: "Support",
+    links: [
+      { href: "/docs", label: "Help Center" },
+      { href: "/contact", label: "Live Chat" },
+      { href: "/terms", label: "Terms of Service" },
+      { href: "/privacy", label: "Privacy Policy" },
+    ],
+  },
+];
+
 export function Footer() {
   return (
-    <footer className="border-t border-white/[0.04] bg-[#06060a]">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+    <footer className="border-t border-[#1e1e30] bg-[#08080f]">
+      <div className="mx-auto max-w-6xl px-5 py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              Pixel<span className="gradient-text">Forge</span>
+            <Link href="/" className="text-xl font-black text-[#e8e8f0]">
+              Pixel<span className="text-violet-400">Forge</span>
             </Link>
-            <p className="mt-3 text-sm text-zinc-500 leading-relaxed max-w-xs">
-              AI-powered image tools. Fast, private, and free to start.
+            <p className="mt-3 text-sm text-[#8888a0] leading-relaxed">
+              All-in-one AI creative toolkit. Image, video, audio & text tools for everyone.
             </p>
-            <div className="mt-4 flex items-center gap-3">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> Online
-              </span>
+            <div className="flex gap-3 mt-4">
+              <a href="https://twitter.com/pixelforgeai" target="_blank" rel="noopener" className="text-[#8888a0] hover:text-violet-400 text-sm">Twitter</a>
+              <a href="https://github.com/pixelforgeai" target="_blank" rel="noopener" className="text-[#8888a0] hover:text-violet-400 text-sm">GitHub</a>
+              <a href="https://discord.gg/pixelforgeai" target="_blank" rel="noopener" className="text-[#8888a0] hover:text-violet-400 text-sm">Discord</a>
             </div>
           </div>
-          {[
-            { t: "Tools", links: [{ h: "/tools/remove-bg", l: "Remove BG" }, { h: "/tools/upscale", l: "Upscale" }, { h: "/tools/compress", l: "Compress" }, { h: "/tools/convert", l: "Convert" }] },
-            { t: "Product", links: [{ h: "/tools", l: "All Tools" }, { h: "/pricing", l: "Pricing" }] },
-            { t: "Legal", links: [{ h: "/privacy", l: "Privacy" }, { h: "/terms", l: "Terms" }] },
-          ].map((s) => (
-            <div key={s.t}>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{s.t}</h3>
-              <ul className="mt-3 space-y-2">
-                {s.links.map((l) => (
-                  <li key={l.l}><Link href={l.h} className="text-sm text-zinc-500 hover:text-violet-400 transition-colors">{l.l}</Link></li>
+          {/* Link sections */}
+          {footerSections.map((section) => (
+            <div key={section.title}>
+              <h4 className="text-sm font-bold text-[#e8e8f0] mb-3">{section.title}</h4>
+              <ul className="space-y-2">
+                {section.links.map((link) => (
+                  <li key={link.href + link.label}>
+                    <Link href={link.href} className="text-sm text-[#8888a0] hover:text-violet-400 transition-colors">
+                      {link.label}
+                    </Link>
+                  </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-        <div className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/[0.04] pt-8">
-          <p className="text-xs text-zinc-600">© {new Date().getFullYear()} PixelForge AI. All rights reserved.</p>
-          <p className="text-xs text-zinc-600">Built for creators worldwide</p>
+        <div className="mt-10 pt-6 border-t border-[#1e1e30] flex flex-col sm:flex-row justify-between gap-3">
+          <p className="text-xs text-[#555570]">© {new Date().getFullYear()} PixelForge AI. All rights reserved.</p>
+          <p className="text-xs text-[#555570]">Made with ❤️ for creators worldwide</p>
         </div>
       </div>
     </footer>

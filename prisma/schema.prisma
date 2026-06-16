@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // For PostgreSQL in production, change this to "postgresql" 
+  // and set DATABASE_URL to your PostgreSQL connection string
+  // Or use: npx prisma generate --schema=prisma/schema.prisma
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String?
+  plan          String   @default("free")
+  creditsUsed   Int      @default(0)
+  creditsLimit  Int      @default(5)
+  periodEnd     DateTime?
+  image         String?
+  role          String   @default("user")
+  provider      String   @default("credentials")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  usages        Usage[]
+  contacts      Contact[]
+  subscriptions Subscription[]
+  passwordResets PasswordReset[]
+}
+
+model Subscription {
+  id                 String   @id @default(cuid())
+  lemonSqueezyId     String   @unique
+  userId             String
+  user               User     @relation(fields: [userId], references: [id])
+  status             String   @default("active")
+  variantId          String
+  plan               String   @default("free")
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Usage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  toolId    String
+  toolName  String
+  status    String   @default("success")
+  credits   Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+}
+
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}

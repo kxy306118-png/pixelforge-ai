@@ -3,86 +3,77 @@ import { useState, useCallback } from "react";
 import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
-import { RefreshCw } from "lucide-react";
+import { AdSidebar } from "@/components/ads";
 
-const formats = [{ v: "png", l: "PNG" }, { v: "jpeg", l: "JPEG" }, { v: "webp", l: "WebP" }, { v: "avif", l: "AVIF" }];
+const formats = [
+  { label: "PNG", value: "png" },
+  { label: "JPEG", value: "jpeg" },
+  { label: "WebP", value: "webp" },
+  { label: "AVIF", value: "avif" },
+];
 
 export default function ConvertPage() {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [originalUrl, setOriginalUrl] = useState<string | null>(null);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [fmt, setFmt] = useState("png");
+  const [file, setFile] = useState<File | null>(null);
+  const [format, setFormat] = useState("png");
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<{ originalUrl: string; resultUrl: string } | null>(null);
+  const [error, setError] = useState("");
 
-  const handleImageSelected = useCallback(async (file: File) => {
-    setIsProcessing(true); setError(null);
-    setOriginalUrl(URL.createObjectURL(file)); setResultUrl(null);
+  const processImage = useCallback(async (f: File) => {
+    setFile(f);
+    setProcessing(true);
+    setError("");
+    setResult(null);
     try {
-      const fd = new FormData(); fd.append("image", file); fd.append("format", fmt);
+      const fd = new FormData();
+      fd.append("image", f);
+      fd.append("format", format);
       const res = await fetch("/api/convert", { method: "POST", body: fd });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
-      setResultUrl(URL.createObjectURL(await res.blob()));
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Error"); }
-    finally { setIsProcessing(false); }
-  }, [fmt]);
+      if (!res.ok) throw new Error("转换失败");
+      const blob = await res.blob();
+      setResult({ originalUrl: URL.createObjectURL(f), resultUrl: URL.createObjectURL(blob) });
+    } catch (e: any) {
+      setError(e.message || "转换失败，请重试");
+    } finally {
+      setProcessing(false);
+    }
+  }, [format]);
 
-  const handleReset = () => { setOriginalUrl(null); setResultUrl(null); setError(null); };
+  const reset = () => { setFile(null); setResult(null); setError(""); };
 
   return (
-    <div className="relative min-h-screen grid-bg">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_40%_at_50%_-10%,rgba(245,158,11,0.08),transparent)]" />
-      <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
-        <div className="lg:grid lg:grid-cols-[1fr_280px] lg:gap-10">
-          <div>
-            <div className="text-center animate-fade-in-up">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-                <RefreshCw className="h-7 w-7" />
-              </div>
-              <h1 className="mt-5 text-2xl sm:text-4xl font-black">Convert <span className="gradient-text">Format</span></h1>
-              <p className="mt-2 text-sm sm:text-base text-zinc-500 max-w-lg mx-auto">Convert between PNG, JPEG, WebP, and AVIF instantly.</p>
-            </div>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">格式转换</span></h1>
+        <p className="mt-3 text-[#8888a0]">PNG、JPG、WebP、AVIF 格式互转，完全免费</p>
+      </div>
 
-            <div className="mt-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-center gap-2 animate-fade-in-up">
-                <span className="text-sm text-zinc-500">Convert to:</span>
-                {formats.map((f) => (
-                  <button key={f.v} onClick={() => setFmt(f.v)} disabled={isProcessing}
-                    className={`rounded-xl px-5 py-2.5 text-sm font-bold transition-all duration-200 ${
-                      fmt === f.v ? "neon-btn" : "ghost-btn"
-                    }`}><span>{f.l}</span></button>
-                ))}
-              </div>
-              {!resultUrl && !isProcessing && <div className="animate-scale-in"><ImageUpload onImageSelected={handleImageSelected} isProcessing={false} /></div>}
-              <ProcessingIndicator isProcessing={isProcessing} message="Converting..." />
-              {error && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-5 text-center animate-scale-in">
-                  <p className="text-sm font-semibold text-red-400">Failed</p>
-                  <p className="mt-1 text-xs text-red-400/70">{error}</p>
-                  <button onClick={handleReset} className="mt-3 text-xs font-semibold text-red-400 underline">Try again</button>
-                </div>
-              )}
-              {resultUrl && (
-                <div className="animate-fade-in-up space-y-4">
-                  <ResultPreview originalUrl={originalUrl} resultUrl={resultUrl} downloadFilename={`converted.${fmt}`} />
-                  <div className="text-center"><button onClick={handleReset} className="text-sm text-violet-400 underline font-medium">Convert another</button></div>
-                </div>
-              )}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          {!result && (
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-sm text-[#8888a0] font-semibold">目标格式：</span>
+              {formats.map((f) => (
+                <button key={f.value} onClick={() => setFormat(f.value)} className={format === f.value ? "btn-option active" : "btn-option"}>
+                  {f.label}
+                </button>
+              ))}
             </div>
-            <div className="mt-8 lg:hidden ad-slot h-[90px] rounded-2xl"><span>Ad</span></div>
-          </div>
-          <aside className="hidden lg:block"><div className="sticky top-24 space-y-5">
-            <div className="ad-slot h-[250px] rounded-2xl"><span>Ad</span></div>
-            <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500">Formats</h3>
-              <ul className="mt-3 space-y-2 text-xs text-zinc-500">
-                <li><strong className="text-zinc-300">PNG</strong> — Lossless, transparent</li>
-                <li><strong className="text-zinc-300">JPEG</strong> — Photos, small</li>
-                <li><strong className="text-zinc-300">WebP</strong> — Modern, great quality</li>
-                <li><strong className="text-zinc-300">AVIF</strong> — Best compression</li>
-              </ul>
+          )}
+
+          {!file && !result && <ImageUpload onImageSelect={processImage} />}
+          {processing && <ProcessingIndicator message="正在转换格式..." />}
+          {error && (
+            <div className="text-center py-10">
+              <p className="text-red-400 mb-4">{error}</p>
+              <button onClick={reset} className="btn-primary">重新上传</button>
             </div>
-          </div></aside>
+          )}
+          {result && (
+            <ResultPreview originalUrl={result.originalUrl} resultUrl={result.resultUrl} fileName={`converted.${format}`} onReset={reset} />
+          )}
         </div>
+        <AdSidebar />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,15 @@ const outputFormats: Record<string, { format: string; contentType: string; ext: 
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit
+    const limited = rateLimit(req, RATE_LIMITS.free);
+    if (limited) return limited;
+
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json({ error: "Invalid request. Please upload a file." }, { status: 400 });
+    }
+
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
     const targetFormat = ((formData.get("format") as string) || "png").toLowerCase();
@@ -42,7 +52,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Verify input is valid image
-    const metadata = await sharp(buffer).metadata();
+    const metadata = await sharp(buffer, { limitInputPixels: 100000000 }).metadata();
     if (!metadata.format) {
       return NextResponse.json({ error: "Could not read image. File may be corrupted." }, { status: 400 });
     }

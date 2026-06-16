@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
+import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -8,6 +9,14 @@ const MAX_DIMENSION = 10000;
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit
+    const limited = rateLimit(req, RATE_LIMITS.free);
+    if (limited) return limited;
+    const contentType = req.headers.get("content-type") || "";
+    if (!contentType.includes("multipart/form-data")) {
+      return NextResponse.json({ error: "Invalid request. Please upload a file." }, { status: 400 });
+    }
+
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
     const width = formData.get("width") as string;
@@ -36,10 +45,10 @@ export async function POST(req: NextRequest) {
     const w = width ? parseInt(width) : undefined;
     const h = height ? parseInt(height) : undefined;
 
-    if (w && (w < 1 || w > MAX_DIMENSION)) {
+    if (w !== undefined && (Number.isNaN(w) || w < 1 || w > MAX_DIMENSION)) {
       return NextResponse.json({ error: `Width must be between 1 and ${MAX_DIMENSION}.` }, { status: 400 });
     }
-    if (h && (h < 1 || h > MAX_DIMENSION)) {
+    if (h !== undefined && (Number.isNaN(h) || h < 1 || h > MAX_DIMENSION)) {
       return NextResponse.json({ error: `Height must be between 1 and ${MAX_DIMENSION}.` }, { status: 400 });
     }
 
