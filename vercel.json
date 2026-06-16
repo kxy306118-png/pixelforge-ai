@@ -1,4 +1,9 @@
 {
   "buildCommand": "prisma generate && next build",
-  "framework": "nextjs"
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "functions": {
+    "src/app/api/remove-bg/route.ts": { "maxDuration": 60 },
+    "src/app/api/upscale/route.ts": { "maxDuration": 60 }
+  }
 }
