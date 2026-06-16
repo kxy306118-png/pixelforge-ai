@@ -3,10 +3,7 @@ generator client {
 }
 
 datasource db {
-  // For PostgreSQL in production, change this to "postgresql" 
-  // and set DATABASE_URL to your PostgreSQL connection string
-  // Or use: npx prisma generate --schema=prisma/schema.prisma
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
