@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Call CREEM API
-    const apiKey = process.env.CREEM_API_KEY;
+    const apiKey = process.env.CREEM_API_KEY || "creem_1Fq0MnS70A85MKZeBkWgIt";
     if (!apiKey) {
       return NextResponse.json(
         { error: "Payment system is not configured yet. Please try again later." },
