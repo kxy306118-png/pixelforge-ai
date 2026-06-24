@@ -15,8 +15,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
     }
     const email = rawEmail.toLowerCase().trim();
-      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
-    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 });
