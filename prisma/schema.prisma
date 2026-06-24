@@ -19,6 +19,8 @@ model User {
   image         String?
   role          String   @default("user")
   provider      String   @default("credentials")
+  emailVerified DateTime?
+  verifyToken   String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -63,6 +65,8 @@ model Contact {
   email     String
   subject   String
   message   String
+  reply     String?
+  repliedAt DateTime?
   status    String   @default("open")
   createdAt DateTime @default(now())
 }

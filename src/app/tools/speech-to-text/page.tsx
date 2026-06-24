@@ -1,87 +1,112 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { FileUpload } from "@/components/file-upload";
 import { ProcessingIndicator } from "@/components/processing-indicator";
-import Link from "next/link";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function SpeechToTextPage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("auto");
   const [task, setTask] = useState("transcribe");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleTranscribe = async () => {
     if (!file) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 3000));
-    setResult("✅ Transcription complete! Full functionality requires Whisper API integration.\n\nSample output:\n[00:00] Hello, welcome to this demonstration.\n[00:05] The speech-to-text tool converts audio files into accurate text.\n[00:10] It supports over 100 languages and automatic detection.");
-    setProcessing(false);
+    setLoading(true);
+    setError("");
+    setResult("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("language", language);
+      fd.append("task", task);
+      const res = await fetch("/api/speech-to-text", { method: "POST", body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Transcription failed"); }
+      const data = await res.json();
+      setResult(data.text || "No text returned");
+    } catch (e: any) {
+      setError(e.message || "Transcription failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <span className="inline-block rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3">Audio Tool · AI</span>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">Speech to Text</h1>
-        <p className="mt-2 text-[#8888a0]">Transcribe audio and video files to text with high accuracy. Powered by Whisper AI.</p>
-        <p className="mt-1 text-xs text-violet-400">⚡ Cost: ~$0.01-0.05 per minute (included in paid plans)</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("stt.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("stt.desc")}</p>
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">Upload audio or video file</label>
-        <FileUpload onFileSelect={setFile} accept="audio/*,video/*" maxSizeMB={200} label="Drop an audio/video file here, or click to upload" hint="MP3, WAV, M4A, FLAC, MP4 — Max 200MB" selectedFile={file} />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("stt.upload_label")}</label>
+            <FileUpload onFileSelect={(f) => { setFile(f); setResult(""); setError(""); }} accept="audio/*,video/*" maxSizeMB={500} selectedFile={file} />
+          </div>
 
-      <div className="grid gap-4 grid-cols-2 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Language</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input-base">
-            <option value="auto">Auto-detect</option>
-            <option value="en">English</option>
-            <option value="zh">Chinese</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-          </select>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("stt.language")}</label>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input-base">
+                <option value="auto">Auto-detect</option>
+                <option value="en">English</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("stt.task")}</label>
+              <select value={task} onChange={(e) => setTask(e.target.value)} className="input-base">
+                <option value="transcribe">Transcribe</option>
+                <option value="translate">Translate to English</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button onClick={handleTranscribe} disabled={!file || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("stt.transcribing") : <>{t("stt.transcribing").split("...")[0]}</>}
+            </button>
+            {!file && <p className="mt-2 text-xs text-[#8888a0]">{t("stt.no_file_tip")}</p>}
+          </div>
+
+          {loading && <ProcessingIndicator message={t("stt.transcribing")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {result && (
+            <div className="card">
+              <pre className="whitespace-pre-wrap text-[#e8e8f0] text-sm leading-relaxed font-sans">{result}</pre>
+              <div className="mt-4 flex gap-2">
+                <button onClick={() => navigator.clipboard.writeText(result)} className="btn-secondary text-sm">Copy</button>
+              </div>
+            </div>
+          )}
+
+          <div className="card">
+            <h3 className="font-bold text-[#e8e8f0] mb-2">{t("stt.tips_title")}</h3>
+            <div className="space-y-1 text-sm text-[#8888a0]">
+              <p>{t("stt.tip1")}</p>
+              <p>{t("stt.tip2")}</p>
+              <p>{t("stt.tip3")}</p>
+              <p>{t("stt.tip4")}</p>
+            </div>
+          </div>
+
+          <div className="text-center text-sm text-[#8888a0]">
+            {t("stt.also_try")} <Link href="/tools/text-to-speech" className="text-violet-400 hover:underline">{t("stt.reverse_link")}</Link> ({t("stt.reverse_desc")})
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Task</label>
-          <select value={task} onChange={(e) => setTask(e.target.value)} className="input-base">
-            <option value="transcribe">Transcribe (same language)</option>
-            <option value="translate">Translate to English</option>
-          </select>
-        </div>
+        <AdSidebar />
       </div>
-
-      <button onClick={handleStart} disabled={processing || !file} className="btn-primary">
-      {!file && <p className="mt-2 text-xs text-[#555570]">Upload a file above to enable the button</p>}
-        {processing ? "Transcribing..." : "Start Transcription"}
-      </button>
-
-      {processing && <ProcessingIndicator message="AI is transcribing your audio..." />}
-      {result && (
-        <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5">
-          <p className="text-sm text-[#8888a0] whitespace-pre-line">{result}</p>
-        </div>
-      )}
-
-      <div className="mt-8 card">
-        <h3 className="font-bold text-[#e8e8f0] mb-2">💡 Tips for best results</h3>
-        <ul className="text-sm text-[#8888a0] space-y-1">
-          <li>• Record at 16kHz or higher for best accuracy</li>
-          <li>• Minimize background noise for clearer transcription</li>
-          <li>• Supports 100+ languages with auto-detection</li>
-          <li>• "Translate to English" converts any language to English text</li>
-        </ul>
-      </div>
-
-      <p className="mt-4 text-center text-xs text-[#555570]">
-        Also try <Link href="/tools/text-to-speech" className="text-violet-400 hover:text-violet-300">Text to Speech</Link> for the reverse
-      </p>
     </div>
   );
 }

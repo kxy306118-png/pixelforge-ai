@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Check, ArrowLeft, Shield, Zap, Loader2 } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 const planDetails: Record<string, { name: string; price: string; credits: string }> = {
   starter: { name: "Starter", price: "$4.99/mo", credits: "50 AI tasks/month" },
@@ -15,6 +16,7 @@ function BillingPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   const plan = searchParams.get("plan") || "pro";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -28,7 +30,7 @@ function BillingPageInner() {
   }, [status, plan, router]);
 
   if (status === "loading") {
-    return <div className="mx-auto max-w-lg px-5 py-20 text-center text-[#8888a0]">Loading...</div>;
+    return <div className="mx-auto max-w-lg px-5 py-20 text-center text-[#8888a0]">{t("dashboard.loading")}</div>;
   }
   if (!session) return null;
 
@@ -44,20 +46,19 @@ function BillingPageInner() {
       const data = await resp.json();
 
       if (!resp.ok) {
-        setError(data.error || "Failed to start checkout. Please try again.");
+        setError(data.error || t("billing.checkout_fail"));
         setLoading(false);
         return;
       }
 
-      // Redirect to LemonSqueezy hosted checkout
       if (data.url) {
         window.location.href = data.url;
       } else {
-        setError("Checkout URL not received. Please contact support.");
+        setError(t("billing.url_error"));
         setLoading(false);
       }
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("billing.network_error"));
       setLoading(false);
     }
   };
@@ -65,10 +66,10 @@ function BillingPageInner() {
   return (
     <div className="mx-auto max-w-lg px-5 py-10">
       <Link href="/pricing" className="inline-flex items-center gap-1 text-sm text-[#8888a0] hover:text-violet-400 mb-6">
-        <ArrowLeft className="h-4 w-4" /> Back to Pricing
+        <ArrowLeft className="h-4 w-4" /> {t("billing.back")}
       </Link>
-      <h1 className="text-2xl font-black text-[#e8e8f0] mb-2">Subscribe to {details.name}</h1>
-      <p className="text-[#8888a0] mb-8">Complete your subscription securely via LemonSqueezy.</p>
+      <h1 className="text-2xl font-black text-[#e8e8f0] mb-2">{t("billing.subscribe_to")} {details.name}</h1>
+      <p className="text-[#8888a0] mb-8">{t("billing.complete_via")}</p>
 
       <div className="card mb-6 bg-gradient-to-br from-violet-500/5 to-transparent border-violet-500/20">
         <div className="flex justify-between items-center mb-3">
@@ -89,10 +90,9 @@ function BillingPageInner() {
       <div className="card">
         <div className="text-center py-6">
           <Shield className="h-12 w-12 text-violet-400 mx-auto mb-4" />
-          <h3 className="font-bold text-[#e8e8f0] mb-2">Secure Checkout</h3>
+          <h3 className="font-bold text-[#e8e8f0] mb-2">{t("billing.start_checkout")}</h3>
           <p className="text-sm text-[#8888a0] mb-6">
-            You&apos;ll be redirected to LemonSqueezy&apos;s secure payment page.
-            Your card details are never stored on our servers.
+            {t("billing.card_not_stored")}
           </p>
           <div className="text-2xl font-black text-[#e8e8f0] mb-1">{details.price}</div>
           <div className="text-sm text-[#8888a0] mb-6">{details.credits}</div>
@@ -102,13 +102,13 @@ function BillingPageInner() {
             className="btn-primary w-full justify-center py-3"
           >
             {loading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to checkout...</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> {t("billing.redirecting")}</>
             ) : (
-              <><Zap className="h-4 w-4" /> Subscribe Now</>
+              <><Zap className="h-4 w-4" /> {t("billing.subscribe_now")}</>
             )}
           </button>
           <div className="mt-4 text-xs text-[#555570]">
-            Secured by LemonSqueezy · Cancel anytime · Instant access
+            {t("billing.secured_by")}
           </div>
         </div>
       </div>

@@ -44,4 +44,4 @@ next-env.d.ts
 dev.db
 prisma.config.ts.bak
 gen-tools.sh
-package-lock.json
+# package-lock.json

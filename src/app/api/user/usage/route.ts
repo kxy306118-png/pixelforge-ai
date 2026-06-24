@@ -5,53 +5,72 @@ import { prisma } from "@/lib/prisma";
 import { PLAN_CREDITS } from "@/lib/usage";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const userId = (session.user as any).id;
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
-  }
+    const userId = (session.user as any).id;
+    if (!userId) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
+    }
 
-  const limit = PLAN_CREDITS[user.plan] ?? PLAN_CREDITS.free;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
-  let used: number;
-  if (user.plan === "free") {
-    // Free users: lifetime credits
-    used = user.creditsUsed;
-  } else if (limit === 9999) {
-    // Unlimited plan
-    used = 0;
-  } else {
-    // Paid users: count this month's usage
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
+    const limit = PLAN_CREDITS[user.plan] ?? PLAN_CREDITS.free;
 
-    const monthUsage = await prisma.usage.aggregate({
-      where: { userId, createdAt: { gte: monthStart } },
-      _sum: { credits: true },
+    let used: number;
+    if (user.plan === "free") {
+      used = user.creditsUsed ?? 0;
+    } else if (limit === 9999) {
+      used = 0;
+    } else {
+      try {
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+
+        const monthUsage = await prisma.usage.aggregate({
+          where: { userId, createdAt: { gte: monthStart } },
+          _sum: { credits: true },
+        });
+        used = monthUsage._sum.credits || 0;
+      } catch {
+        used = 0;
+      }
+    }
+
+    let recentUsages: any[] = [];
+    try {
+      recentUsages = await prisma.usage.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      });
+    } catch {
+      // Usage table might not exist yet
+    }
+
+    return NextResponse.json({
+      user: { name: user.name, email: user.email, plan: user.plan, role: user.role },
+      credits: {
+        used,
+        limit,
+        remaining: limit === 9999 ? 9999 : Math.max(0, limit - used),
+      },
+      periodEnd: user.periodEnd,
+      recentUsages,
     });
-    used = monthUsage._sum.credits || 0;
+  } catch (error) {
+    console.error("Usage API error:", error);
+    return NextResponse.json({
+      user: { name: "User", email: "", plan: "free", role: "user" },
+      credits: { used: 0, limit: 5, remaining: 5 },
+      recentUsages: [],
+    });
   }
-
-  const recentUsages = await prisma.usage.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-  });
-
-  return NextResponse.json({
-    user: { name: user.name, email: user.email, plan: user.plan, role: user.role },
-    credits: {
-      used,
-      limit,
-      remaining: limit === 9999 ? 9999 : Math.max(0, limit - used),
-    },
-    periodEnd: user.periodEnd,
-    recentUsages,
-  });
 }

@@ -1,13 +1,18 @@
-export function ProcessingIndicator({ message = "AI is processing..." }: { message?: string }) {
+"use client";
+import { useI18n } from "@/lib/i18n";
+
+export function ProcessingIndicator({ message }: { message: string }) {
+  const { t } = useI18n();
   return (
-    <div className="flex flex-col items-center justify-center py-16">
-      <div className="relative h-16 w-16 mb-4">
-        <div className="absolute inset-0 rounded-full border-2 border-violet-500/20"></div>
-        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-violet-500 animate-spin"></div>
-        <div className="absolute inset-2 rounded-full border-2 border-transparent border-t-violet-400 animate-spin" style={{ animationDirection: "reverse", animationDuration: "0.8s" }}></div>
+    <div className="card text-center py-12">
+      <div className="inline-flex items-center gap-2 text-violet-400 font-bold mb-3">
+        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        {message}
       </div>
-      <p className="text-base font-semibold text-[#e8e8f0]">{message}</p>
-      <p className="mt-1 text-sm text-[#8888a0]">This usually takes 3-30 seconds</p>
+      <p className="text-sm text-[#8888a0]">{t("processing.usually")}</p>
     </div>
   );
 }

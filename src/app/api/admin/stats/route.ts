@@ -25,7 +25,7 @@ export async function GET() {
   const recentContacts = await prisma.contact.findMany({
     orderBy: { createdAt: "desc" },
     take: 50,
-    select: { id: true, name: true, email: true, subject: true, message: true, status: true, createdAt: true },
+    select: { id: true, name: true, email: true, subject: true, message: true, reply: true, repliedAt: true, status: true, createdAt: true },
   });
 
   return NextResponse.json({

@@ -6,7 +6,7 @@
  * To enable emails in production:
  * 1. Create a free account at https://resend.com
  * 2. Set RESEND_API_KEY in .env.local
- * 3. Set FROM_EMAIL="PixelForge AI <noreply@pixelforge.ai>"
+ * 3. Set FROM_EMAIL="PixelForge AI <noreply@pixelforgeai.club>"
  */
 
 interface EmailParams {
@@ -17,7 +17,7 @@ interface EmailParams {
 
 export async function sendEmail({ to, subject, html }: EmailParams): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL || "PixelForge AI <noreply@pixelforge.ai>";
+  const fromEmail = process.env.FROM_EMAIL || "PixelForge AI <noreply@pixelforgeai.club>";
 
   if (!apiKey) {
     // Dev mode: just log

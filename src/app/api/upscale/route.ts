@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAndReserveUsage, finalizeUsage, refundUsage, usageErrorResponse, usageErrorStatus } from "@/lib/usage";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
-import sharp from "sharp";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -83,6 +82,7 @@ export async function POST(req: NextRequest) {
 
     // Validate dimensions
     try {
+      const sharp = (await import("sharp")).default;
       const metadata = await sharp(buffer, { limitInputPixels: 100000000 }).metadata();
       if (!metadata.width || !metadata.height) {
         throw new Error("Invalid image");

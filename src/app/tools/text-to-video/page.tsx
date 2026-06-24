@@ -1,97 +1,107 @@
 "use client";
 import { useState } from "react";
-import { ProcessingIndicator } from "@/components/processing-indicator";
 import Link from "next/link";
-import { Lock, Sparkles } from "lucide-react";
+import { Video } from "lucide-react";
+import { ProcessingIndicator } from "@/components/processing-indicator";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function TextToVideoPage() {
+  const { t } = useI18n();
   const [prompt, setPrompt] = useState("");
-  const [duration, setDuration] = useState("5");
-  const [style, setStyle] = useState("cinematic");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [duration, setDuration] = useState(5);
+  const [style, setStyle] = useState("auto");
+  const [loading, setLoading] = useState(false);
+  const [videoUrl, setVideoUrl] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 3000));
-    setResult("✅ Video generation is a premium feature. Upgrade to a paid plan to unlock AI video creation!");
-    setProcessing(false);
+    setLoading(true);
+    setError("");
+    setVideoUrl("");
+    try {
+      const res = await fetch("/api/text-to-video", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, duration, style }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Video generation failed"); }
+      const data = await res.json();
+      if (data.url) { setVideoUrl(data.url); } else { throw new Error("No video returned"); }
+    } catch (e: any) {
+      setError(e.message || "Video generation failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="inline-block rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-400">Video Tool · AI</span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400">
-            <Lock className="h-3 w-3" /> Premium
-          </span>
-        </div>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">Text to Video</h1>
-        <p className="mt-2 text-[#8888a0]">Generate short videos from text descriptions using AI. Powered by Tencent Hunyuan Video.</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("ttv.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("ttv.desc")}</p>
       </div>
 
-      <div className="card mb-6 border-violet-500/20 bg-violet-500/5">
-        <div className="flex items-start gap-3">
-          <Sparkles className="h-5 w-5 text-violet-400 mt-0.5 shrink-0" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          {/* Premium notice */}
+          <div className="card border-violet-500/30 bg-violet-500/5 text-center">
+            <span className="inline-block rounded-full bg-violet-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-violet-400 mb-2">{t("ttv.premium")}</span>
+            <p className="text-sm text-[#e8e8f0]">{t("ttv.premium_notice")}</p>
+            <p className="mt-1 text-xs text-[#8888a0]">{t("ttv.premium_desc")}</p>
+            <Link href="/pricing" className="btn-primary mt-3 inline-flex text-sm">{t("ttv.view_plans")}</Link>
+          </div>
+
+          {/* Prompt */}
           <div>
-            <p className="text-sm font-bold text-[#e8e8f0]">This is a premium tool</p>
-            <p className="text-xs text-[#8888a0] mt-1">Type a prompt below to preview the interface. To actually generate videos, upgrade to a paid plan.</p>
-            <Link href="/pricing" className="inline-block mt-2 text-xs font-bold text-violet-400 hover:text-violet-300">View plans →</Link>
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("ttv.prompt_label")}</label>
+            <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={t("ttv.prompt_tip")} className="input-base resize-y min-h-[120px]" />
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("ttv.duration")}</label>
+              <select value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="input-base">
+                <option value={3}>3s</option>
+                <option value={5}>5s</option>
+                <option value={10}>10s</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("ttv.style")}</label>
+              <select value={style} onChange={(e) => setStyle(e.target.value)} className="input-base">
+                <option value="auto">Auto</option>
+                <option value="realistic">Realistic</option>
+                <option value="anime">Anime</option>
+                <option value="3d">3D Render</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button onClick={handleGenerate} disabled={!prompt.trim() || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("ttv.generating") : <><Video className="h-5 w-5" /> {t("ttv.generate")}</>}
+            </button>
+            {!prompt.trim() && <p className="mt-2 text-xs text-[#8888a0]">{t("ttv.no_prompt_tip")}</p>}
+          </div>
+
+          {loading && <ProcessingIndicator message={t("ttv.generating")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {videoUrl && (
+            <div className="card text-center">
+              <video controls src={videoUrl} className="mx-auto max-w-full rounded-xl" />
+              <a href={videoUrl} download="video.mp4" className="btn-primary mt-4 inline-flex text-sm">{t("result.download")}</a>
+            </div>
+          )}
+
+          <div className="text-center text-sm text-[#8888a0]">
+            {t("ttv.need_more")} <Link href="/tools/image-to-video" className="text-violet-400 hover:underline">{t("ttv.image_to_video")}</Link> {t("ttv.or")} <Link href="/tools/video-subtitle" className="text-violet-400 hover:underline">{t("ttv.subtitles")}</Link>
           </div>
         </div>
+        <AdSidebar />
       </div>
-
-      <div className="card mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">Describe the video you want</label>
-        <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={5} className="input-base" placeholder="A golden retriever running on a sandy beach at sunset, cinematic camera tracking shot, warm lighting, 4K quality..." />
-        <p className="mt-1 text-xs text-[#555570]">Be specific: describe the scene, camera movement, lighting, and style. Under 80 words works best.</p>
-      </div>
-
-      <div className="grid gap-4 grid-cols-2 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Duration</label>
-          <select value={duration} onChange={(e) => setDuration(e.target.value)} className="input-base">
-            <option value="3">3 seconds</option>
-            <option value="5">5 seconds</option>
-            <option value="10">10 seconds</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Style</label>
-          <select value={style} onChange={(e) => setStyle(e.target.value)} className="input-base">
-            <option value="cinematic">Cinematic</option>
-            <option value="anime">Anime</option>
-            <option value="realistic">Realistic</option>
-            <option value="watercolor">Watercolor</option>
-            <option value="3d">3D Render</option>
-          </select>
-        </div>
-      </div>
-
-      <button onClick={handleStart} disabled={processing || !prompt.trim()} className="btn-primary">
-        {processing ? "Generating (30-60s)..." : <><Sparkles className="h-4 w-4" /> Generate Video</>}
-      </button>
-      {!prompt.trim() && <p className="mt-2 text-xs text-[#555570]">Enter a description above to enable the button</p>}
-
-      {processing && <ProcessingIndicator message="AI is creating your video (this may take 30-60 seconds)..." />}
-      {result && <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5"><p className="text-sm text-[#8888a0]">{result}</p></div>}
-
-      <div className="mt-8 card">
-        <h3 className="font-bold text-[#e8e8f0] mb-2">💡 Tips for better videos</h3>
-        <ul className="text-sm text-[#8888a0] space-y-1">
-          <li>• Be specific about the scene, camera angle, and lighting</li>
-          <li>• Include motion descriptions: "slow zoom", "tracking shot", "pan left"</li>
-          <li>• Start with short clips (3-5 seconds) to test your prompts</li>
-          <li>• Same prompt gives different results each time — generate multiple variants</li>
-        </ul>
-      </div>
-
-      <p className="mt-4 text-center text-xs text-[#555570]">
-        Need more video tools? Try <Link href="/tools/image-to-video" className="text-violet-400 hover:text-violet-300">Image to Video</Link> or <Link href="/tools/video-subtitle" className="text-violet-400 hover:text-violet-300">Auto Subtitles</Link>
-      </p>
     </div>
   );
 }

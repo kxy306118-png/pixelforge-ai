@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -26,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
-    const targetFormat = ((formData.get("format") as string) || "png").toLowerCase();
+    const targetFormat = ((formData.get("targetFormat") as string) || (formData.get("format") as string) || "png").toLowerCase();
 
     if (!imageFile) {
       return NextResponse.json({ error: "No image provided. Please upload an image file." }, { status: 400 });
@@ -50,6 +49,9 @@ export async function POST(req: NextRequest) {
 
     const bytes = await imageFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Dynamic import sharp for Vercel serverless compatibility
+    const sharp = (await import("sharp")).default;
 
     // Verify input is valid image
     const metadata = await sharp(buffer, { limitInputPixels: 100000000 }).metadata();

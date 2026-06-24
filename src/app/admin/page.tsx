@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Users, BarChart3, MessageSquare, DollarSign, TrendingUp, AlertCircle, Mail, Shield } from "lucide-react";
 
-interface ContactMsg { id: string; name: string; email: string; subject: string; message: string; status: string; createdAt: string }
+interface ContactMsg { id: string; name: string; email: string; subject: string; message: string; reply: string | null; repliedAt: string | null; status: string; createdAt: string }
 
 interface AdminData {
   stats: { totalUsers: number; totalUsages: number; openContacts: number };
@@ -223,16 +223,69 @@ export default function AdminPage() {
                     <p className="text-xs text-[#555570]">{new Date(selectedMsg.createdAt).toLocaleString()}</p>
                   </div>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold ${selectedMsg.status === "open" ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"}`}>
-                    {selectedMsg.status === "open" ? "Unread" : "Read"}
+                    {selectedMsg.status === "open" ? "Unread" : selectedMsg.status === "replied" ? "Replied" : "Read"}
                   </span>
                 </div>
                 <div className="border-t border-[#2a2a45] pt-4">
                   <p className="text-sm text-[#c8c8d8] leading-relaxed whitespace-pre-line">{selectedMsg.message}</p>
                 </div>
-                <div className="mt-6 flex gap-3">
-                  <a href={`mailto:${selectedMsg.email}?subject=Re: ${selectedMsg.subject}`} className="btn-primary text-sm">
-                    <Mail className="h-4 w-4" /> Reply via Email
-                  </a>
+
+                {/* Show existing reply if any */}
+                {selectedMsg.reply && (
+                  <div className="mt-4 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <p className="text-xs font-bold text-emerald-400 mb-2">✅ Your Reply {selectedMsg.repliedAt ? `· ${new Date(selectedMsg.repliedAt).toLocaleString()}` : ""}</p>
+                    <p className="text-sm text-[#c8c8d8] leading-relaxed whitespace-pre-line">{selectedMsg.reply}</p>
+                  </div>
+                )}
+
+                <div className="mt-6">
+                  {/* Reply Form */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-[#8888a0] mb-2">Reply to {selectedMsg.name}</label>
+                    <textarea
+                      id="replyText"
+                      rows={4}
+                      className="input-base resize-y min-h-[100px] mb-3"
+                      placeholder="Type your reply here..."
+                    />
+                    <div className="flex gap-3 flex-wrap">
+                      <button
+                        onClick={async () => {
+                          const textarea = document.getElementById("replyText") as HTMLTextAreaElement;
+                          const replyMessage = textarea?.value?.trim();
+                          if (!replyMessage) return alert("Please enter a reply message.");
+                          try {
+                            const res = await fetch("/api/admin/reply", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ contactId: selectedMsg.id, replyMessage }),
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                              alert(data.warning || data.message || "Reply sent!");
+                              textarea.value = "";
+                              // Update status visually
+                              selectedMsg.status = "replied";
+                              setSelectedMsg({ ...selectedMsg });
+                            } else {
+                              alert(data.error || "Failed to send reply.");
+                            }
+                          } catch {
+                            alert("Network error. Please try again.");
+                          }
+                        }}
+                        className="btn-primary text-sm"
+                      >
+                        <Mail className="h-4 w-4" /> Send Reply
+                      </button>
+                      <a
+                        href={`mailto:${selectedMsg.email}?subject=Re: ${selectedMsg.subject}`}
+                        className="btn-secondary text-sm"
+                      >
+                        Open in Email Client
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

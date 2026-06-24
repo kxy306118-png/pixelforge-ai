@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -60,10 +59,13 @@ export async function POST(req: NextRequest) {
     const bytes = await imageFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const resizeOptions: sharp.ResizeOptions = {
+    // Dynamic import sharp for Vercel serverless compatibility
+    const sharp = (await import("sharp")).default;
+
+    const resizeOptions = {
       width: w,
       height: h,
-      fit: fit as keyof sharp.FitEnum,
+      fit: fit as "cover" | "contain" | "fill" | "inside" | "outside",
       withoutEnlargement: true,
     };
 

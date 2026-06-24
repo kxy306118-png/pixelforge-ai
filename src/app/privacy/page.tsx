@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Account data:</strong> Email address and hashed password</li>
             <li><strong>Usage logs:</strong> Which tools you used and when (for quota tracking). Does not include the images themselves.</li>
-            <li><strong>Subscription records:</strong> Plan tier, billing period, and subscription status (managed via LemonSqueezy)</li>
+            <li><strong>Subscription records:</strong> Plan tier, billing period, and subscription status (managed via CREEM)</li>
             <li><strong>Contact messages:</strong> If you submit our contact form, we store your name, email, and message</li>
           </ul>
         </section>
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           <p className="mt-2">We use the following third-party services. Each has its own privacy policy:</p>
           <ul className="mt-2 list-disc pl-5 space-y-1">
             <li><strong>Replicate</strong> — Processes AI image tasks. <a href="https://replicate.com/privacy" className="text-violet-400 hover:underline" target="_blank" rel="noopener noreferrer">Their Privacy Policy</a></li>
-            <li><strong>LemonSqueezy</strong> — Handles payments and subscriptions. Card data never touches our servers. <a href="https://www.lemonsqueezy.com/privacy" className="text-violet-400 hover:underline" target="_blank" rel="noopener noreferrer">Their Privacy Policy</a></li>
+            <li><strong>CREEM</strong> — Handles payments and subscriptions. Card data never touches our servers. <a href="https://creem.io/privacy-policy" className="text-violet-400 hover:underline" target="_blank" rel="noopener noreferrer">Their Privacy Policy</a></li>
             <li><strong>Vercel</strong> — Hosts our web application. <a href="https://vercel.com/legal/privacy-policy" className="text-violet-400 hover:underline" target="_blank" rel="noopener noreferrer">Their Privacy Policy</a></li>
           </ul>
         </section>
@@ -62,17 +62,17 @@ export default function PrivacyPage() {
             <li><strong>Opt-out:</strong> Unsubscribe from any marketing emails</li>
             <li><strong>Data portability:</strong> Export your usage data in a machine-readable format</li>
           </ul>
-          <p className="mt-2">To exercise any of these rights, contact us at <a href="mailto:privacy@pixelforge.ai" className="text-violet-400 hover:underline">privacy@pixelforge.ai</a>.</p>
+          <p className="mt-2">To exercise any of these rights, contact us at <a href="mailto:1162093529@qq.com" className="text-violet-400 hover:underline">1162093529@qq.com</a>.</p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#e8e8f0]">8. Security</h2>
-          <p className="mt-2">Passwords are hashed using bcrypt. All API communication uses HTTPS. We do not store payment card information — all payments are processed by LemonSqueezy, a PCI-DSS compliant provider.</p>
+          <p className="mt-2">Passwords are hashed using bcrypt. All API communication uses HTTPS. We do not store payment card information — all payments are processed by CREEM, a PCI-DSS compliant provider.</p>
         </section>
 
         <section>
           <h2 className="text-lg font-semibold text-[#e8e8f0]">9. Contact</h2>
-          <p className="mt-2">For any privacy-related questions, contact us at <a href="mailto:privacy@pixelforge.ai" className="text-violet-400 hover:underline">privacy@pixelforge.ai</a>.</p>
+          <p className="mt-2">For any privacy-related questions, contact us at <a href="mailto:1162093529@qq.com" className="text-violet-400 hover:underline">1162093529@qq.com</a>.</p>
         </section>
       </div>
     </div>

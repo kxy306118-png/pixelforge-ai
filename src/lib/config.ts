@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: "PixelForge AI",
   description: "All-in-one AI-powered creative toolkit — image, video, audio & text tools for everyone.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://pixelforge.ai",
+  url: process.env.NEXT_PUBLIC_SITE_URL || "https://pixelforgeai.club",
   ogImage: "/og-image.png",
 };
 

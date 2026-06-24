@@ -4,27 +4,35 @@ import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
 import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
-const presets = [
-  { label: "自定义", w: "", h: "" },
-  { label: "微信头像", w: "640", h: "640" },
-  { label: "手机壁纸", w: "1080", h: "1920" },
-  { label: "电脑壁纸", w: "1920", h: "1080" },
-  { label: "头像 1:1", w: "800", h: "800" },
-];
+const PRESETS: Record<string, [number, number]> = {
+  avatar: [512, 512],
+  wechat: [640, 640],
+  mobile: [1080, 1920],
+  desktop: [1920, 1080],
+  custom: [0, 0],
+};
 
 export default function ResizePage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
-  const [width, setWidth] = useState("");
-  const [height, setHeight] = useState("");
+  const [preset, setPreset] = useState("custom");
+  const [width, setWidth] = useState(800);
+  const [height, setHeight] = useState(600);
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{ originalUrl: string; resultUrl: string } | null>(null);
+  const [result, setResult] = useState<{ originalUrl: string; resultUrl: string; originalSize: string; resultSize: string } | null>(null);
   const [error, setError] = useState("");
 
-  const applyPreset = (w: string, h: string) => { setWidth(w); setHeight(h); };
+  const fmt = (b: number) => (b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(2)} MB`);
+
+  const handlePreset = (p: string) => {
+    setPreset(p);
+    if (PRESETS[p]) { setWidth(PRESETS[p][0]); setHeight(PRESETS[p][1]); }
+  };
 
   const processImage = useCallback(async (f: File) => {
-    if (!width || !height) { setError("请输入宽度和高度"); return; }
+    if (!width || !height) { setError(t("resize.need_dims")); return; }
     setFile(f);
     setProcessing(true);
     setError("");
@@ -32,75 +40,75 @@ export default function ResizePage() {
     try {
       const fd = new FormData();
       fd.append("image", f);
-      fd.append("width", width);
-      fd.append("height", height);
+      fd.append("width", String(width));
+      fd.append("height", String(height));
       const res = await fetch("/api/resize", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("缩放失败");
+      if (!res.ok) {
+        let msg = t("resize.fail");
+        try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       const blob = await res.blob();
-      setResult({ originalUrl: URL.createObjectURL(f), resultUrl: URL.createObjectURL(blob) });
+      if (blob.size === 0) throw new Error("Empty response from server");
+      setResult({
+        originalUrl: URL.createObjectURL(f),
+        resultUrl: URL.createObjectURL(blob),
+        originalSize: fmt(f.size),
+        resultSize: fmt(blob.size),
+      });
     } catch (e: any) {
-      setError(e.message || "缩放失败，请重试");
+      setError(e.message || t("resize.fail"));
     } finally {
       setProcessing(false);
     }
-  }, [width, height]);
+  }, [width, height, t]);
 
   const reset = () => { setFile(null); setResult(null); setError(""); };
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">图片缩放</span></h1>
-        <p className="mt-3 text-[#8888a0]">调整图片尺寸，支持预设和自定义像素</p>
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("resize.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("resize.desc")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
         <div className="space-y-6">
           {!result && (
-            <>
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <span className="text-sm text-[#8888a0] font-semibold mr-1">预设：</span>
-                {presets.map((p) => (
-                  <button
-                    key={p.label}
-                    onClick={() => applyPreset(p.w, p.h)}
-                    className={width === p.w && height === p.h ? "btn-option active" : "btn-option"}
-                  >
-                    {p.label}
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-3 flex-wrap">
+                <span className="text-sm text-[#8888a0] font-semibold">{t("resize.preset_label")}</span>
+                {Object.keys(PRESETS).map((p) => (
+                  <button key={p} onClick={() => handlePreset(p)} className={`btn-option ${preset === p ? "active" : ""}`}>
+                    {t(`resize.preset_${p}`)}
                   </button>
                 ))}
               </div>
               <div className="flex items-center justify-center gap-3">
-                <input
-                  type="number"
-                  placeholder="宽度"
-                  value={width}
-                  onChange={(e) => setWidth(e.target.value)}
-                  className="w-28 rounded-xl border border-[#1e1e30] bg-[#12121e] px-4 py-2.5 text-sm text-[#e8e8f0] text-center focus:border-violet-500 focus:outline-none"
-                />
-                <span className="text-[#55556a] font-bold">×</span>
-                <input
-                  type="number"
-                  placeholder="高度"
-                  value={height}
-                  onChange={(e) => setHeight(e.target.value)}
-                  className="w-28 rounded-xl border border-[#1e1e30] bg-[#12121e] px-4 py-2.5 text-sm text-[#e8e8f0] text-center focus:border-violet-500 focus:outline-none"
-                />
-                <span className="text-xs text-[#55556a]">px</span>
+                <input type="number" value={width} onChange={(e) => { setWidth(Number(e.target.value)); setPreset("custom"); }} placeholder={t("resize.width_ph")} className="input-base w-28 text-center" />
+                <span className="text-[#8888a0]">××</span>
+                <input type="number" value={height} onChange={(e) => { setHeight(Number(e.target.value)); setPreset("custom"); }} placeholder={t("resize.height_ph")} className="input-base w-28 text-center" />
+                <span className="text-sm text-[#8888a0]">{t("resize.px")}</span>
               </div>
-            </>
+            </div>
           )}
-
           {!file && !result && <ImageUpload onImageSelect={processImage} />}
-          {processing && <ProcessingIndicator message="正在缩放图片..." />}
+          {processing && <ProcessingIndicator message={t("resize.processing")} />}
           {error && (
             <div className="text-center py-10">
               <p className="text-red-400 mb-4">{error}</p>
-              <button onClick={reset} className="btn-primary">重新上传</button>
+              <button onClick={reset} className="btn-primary">{t("resize.reset")}</button>
             </div>
           )}
           {result && (
-            <ResultPreview originalUrl={result.originalUrl} resultUrl={result.resultUrl} fileName="resized.png" onReset={reset} />
+            <ResultPreview
+              originalUrl={result.originalUrl}
+              resultUrl={result.resultUrl}
+              originalSize={result.originalSize}
+              resultSize={result.resultSize}
+              fileName={`resized_${width}x${height}.png`}
+              onReset={reset}
+            />
           )}
         </div>
         <AdSidebar />

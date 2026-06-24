@@ -2,80 +2,95 @@
 import { useState } from "react";
 import { FileUpload } from "@/components/file-upload";
 import { ProcessingIndicator } from "@/components/processing-indicator";
-import Link from "next/link";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function VideoSubtitlePage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [language, setLanguage] = useState("auto");
-  const [format, setFormat] = useState("srt");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [outputFormat, setOutputFormat] = useState("srt");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleGenerate = async () => {
     if (!file) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 3000));
-    setResult("✅ Subtitles generated! Full functionality requires Whisper API integration. Output format: " + format.toUpperCase());
-    setProcessing(false);
+    setLoading(true);
+    setError("");
+    setResult("");
+    try {
+      const fd = new FormData();
+      fd.append("video", file);
+      fd.append("language", language);
+      fd.append("format", outputFormat);
+      const res = await fetch("/api/video-subtitle", { method: "POST", body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Subtitle generation failed"); }
+      const data = await res.json();
+      setResult(data.subtitles || "No subtitles generated");
+    } catch (e: any) {
+      setError(e.message || "Subtitle generation failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <span className="inline-block rounded-full bg-blue-500/10 border border-blue-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-3">Video Tool · AI</span>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">Auto Subtitles</h1>
-        <p className="mt-2 text-[#8888a0]">Upload a video and automatically generate timed subtitles using Whisper AI.</p>
-        <p className="mt-1 text-xs text-violet-400">⚡ Cost: ~$0.01-0.05 per minute (included in paid plans)</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("vs.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("vs.desc")}</p>
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">Upload video file</label>
-        <FileUpload onFileSelect={setFile} accept="video/*" maxSizeMB={200} label="Drop a video here, or click to upload" hint="MP4, MOV, WebM — Max 200MB" selectedFile={file} />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("vs.upload_label")}</label>
+            <FileUpload onFileSelect={(f) => { setFile(f); setResult(""); setError(""); }} accept="video/*" maxSizeMB={500} selectedFile={file} />
+          </div>
 
-      <div className="grid gap-4 grid-cols-2 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Language</label>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input-base">
-            <option value="auto">Auto-detect</option>
-            <option value="en">English</option>
-            <option value="zh">Chinese</option>
-            <option value="ja">Japanese</option>
-            <option value="ko">Korean</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="pt">Portuguese</option>
-            <option value="ar">Arabic</option>
-          </select>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("vs.language")}</label>
+              <select value={language} onChange={(e) => setLanguage(e.target.value)} className="input-base">
+                <option value="auto">Auto-detect</option>
+                <option value="en">English</option>
+                <option value="zh">Chinese</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="es">Spanish</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[180px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("vs.output_format")}</label>
+              <select value={outputFormat} onChange={(e) => setOutputFormat(e.target.value)} className="input-base">
+                <option value="srt">SRT</option>
+                <option value="vtt">VTT</option>
+                <option value="txt">TXT</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button onClick={handleGenerate} disabled={!file || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("vs.generating") : <>{t("vs.generate")}</>}
+            </button>
+            {!file && <p className="mt-2 text-xs text-[#8888a0]">{t("vs.no_file_tip")}</p>}
+          </div>
+
+          {loading && <ProcessingIndicator message={t("vs.generating")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {result && (
+            <div className="card">
+              <pre className="whitespace-pre-wrap text-[#e8e8f0] text-sm leading-relaxed font-sans max-h-[400px] overflow-y-auto">{result}</pre>
+              <div className="mt-4 flex gap-2">
+                <button onClick={() => navigator.clipboard.writeText(result)} className="btn-secondary text-sm">Copy</button>
+                <button onClick={() => { const blob = new Blob([result], { type: "text/plain" }); const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = `subtitles.${outputFormat}`; a.click(); URL.revokeObjectURL(url); }} className="btn-primary text-sm">{t("result.download")}</button>
+              </div>
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Output format</label>
-          <select value={format} onChange={(e) => setFormat(e.target.value)} className="input-base">
-            <option value="srt">SRT</option>
-            <option value="vtt">WebVTT</option>
-            <option value="txt">Plain Text</option>
-          </select>
-        </div>
-      </div>
-
-      <button onClick={handleStart} disabled={processing || !file} className="btn-primary">
-      {!file && <p className="mt-2 text-xs text-[#555570]">Upload a file above to enable the button</p>}
-        {processing ? "Generating subtitles..." : "Generate Subtitles"}
-      </button>
-
-      {processing && <ProcessingIndicator message="AI is transcribing your video..." />}
-      {result && <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5"><p className="text-sm text-[#8888a0]">{result}</p></div>}
-
-      <div className="mt-8 card">
-        <h3 className="font-bold text-[#e8e8f0] mb-2">💡 Tips for best transcription</h3>
-        <ul className="text-sm text-[#8888a0] space-y-1">
-          <li>• Use clear audio with minimal background noise</li>
-          <li>• Supported: 100+ languages via Whisper AI</li>
-          <li>• Auto-detect works well for single-language videos</li>
-          <li>• SRT/WebVTT includes timestamps for direct import into video editors</li>
-        </ul>
+        <AdSidebar />
       </div>
     </div>
   );

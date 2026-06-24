@@ -8,7 +8,7 @@ const sections = [
       { q: "What is PixelForge?", a: "PixelForge AI is an all-in-one creative toolkit that provides 16 AI-powered tools for image, video, audio, and text processing. Instead of subscribing to multiple services (remove.bg, TinyPNG, Runway, Otter.ai, etc.), you get everything in one platform starting at $4.99/month." },
       { q: "How do I create an account?", a: "Click the 'Sign Up' button in the top-right corner. Enter your name, email, and password. You'll get 3 free AI tasks per day to try all tools. No credit card required." },
       { q: "What's included in the free plan?", a: "The free plan gives you:\n• 3 AI tasks per day (background removal, upscaling, etc.)\n• Unlimited basic tools (compress, convert, resize)\n• Max 10MB per file\n• Standard processing speed\n\nBasic tools (compress, convert, resize) are always free and don't count against your AI credits." },
-      { q: "How do I upgrade my plan?", a: "Go to the Pricing page and click 'Subscribe' on your desired plan. If you're logged in, you'll go directly to the payment page. If not logged in, you'll be prompted to sign up or log in first. We accept all major credit cards via LemonSqueezy." },
+      { q: "How do I upgrade my plan?", a: "Go to the Pricing page and click 'Subscribe' on your desired plan. If you're logged in, you'll go directly to the payment page. If not logged in, you'll be prompted to sign up or log in first. We accept all major credit cards via CREEM." },
     ],
   },
   {
@@ -50,7 +50,7 @@ const sections = [
       { q: "What are the plan options?", a: "Free ($0): 3 AI tasks/day, basic tools unlimited, 10MB limit\nStarter ($4.99/mo): 30 AI tasks/month, 25MB limit, no watermark, ad-free\nPro ($9.99/mo): 150 AI tasks/month, 50MB limit, batch processing, email support — MOST POPULAR\nUnlimited ($19.99/mo): Unlimited AI tasks, 200MB limit, API access, priority support\n\nSave 20% with annual billing!" },
       { q: "What counts as an AI task?", a: "AI tasks include: Background Removal, Image Upscale, Photo Enhance, Image Generation, Text-to-Video, Image-to-Video, Auto Subtitles, Speech-to-Text, Text-to-Speech, Audio Enhance, OCR, and AI Copywriter.\n\nBasic tools (Compress, Convert, Resize) are always free and unlimited — they never count as AI tasks." },
       { q: "Can I cancel anytime?", a: "Yes! You can cancel your subscription at any time. You'll keep access until the end of your current billing period. No cancellation fees. We also offer a 7-day money-back guarantee." },
-      { q: "Do you offer refunds?", a: "We offer a 7-day money-back guarantee on all paid plans. If you're not satisfied within the first 7 days, contact support@pixelforge.ai for a full refund." },
+      { q: "Do you offer refunds?", a: "We offer a 7-day money-back guarantee on all paid plans. If you're not satisfied within the first 7 days, contact 1162093529@qq.com for a full refund." },
     ],
   },
   {
@@ -63,8 +63,8 @@ const sections = [
   {
     title: "🛟 Support & Contact",
     items: [
-      { q: "How do I contact support?", a: "You can reach us through:\n• Contact form: pixelforge.ai/contact\n• Email: support@pixelforge.ai\n• Response time: Within 24 hours\n• Pro and Unlimited users get priority support" },
-      { q: "How do I access the admin panel?", a: "The admin panel is at pixelforge.ai/admin. Only accounts with admin privileges can access it. To set up admin access:\n1. Register an account\n2. Use the database to set role='admin' for your user\n3. Log in and navigate to /admin\n\nThe admin panel shows: user statistics, revenue estimates, message inbox, plan distribution, and tool usage analytics." },
+      { q: "How do I contact support?", a: "You can reach us through:\n• Contact form: pixelforgeai.club/contact\n• Email: 1162093529@qq.com\n• Response time: Within 24 hours\n• Pro and Unlimited users get priority support" },
+      { q: "How do I access the admin panel?", a: "The admin panel is at pixelforgeai.club/admin. Only accounts with admin privileges can access it. To set up admin access:\n1. Register an account\n2. Use the database to set role='admin' for your user\n3. Log in and navigate to /admin\n\nThe admin panel shows: user statistics, revenue estimates, message inbox, plan distribution, and tool usage analytics." },
       { q: "Where do I see messages from the Contact form?", a: "All messages sent through the Contact form are stored in the database and visible in the Admin Panel under the 'Messages' tab. Each message shows the sender's name, email, subject, message content, date, and status (open/replied). Go to /admin → Messages tab." },
     ],
   },

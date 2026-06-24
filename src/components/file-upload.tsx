@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, type DragEvent } from "react";
 import { Upload, Link, Clipboard } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -13,6 +14,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, label, hint, selectedFile }: FileUploadProps) {
+  const { t } = useI18n();
   const [drag, setDrag] = useState(false);
   const [urlInput, setUrlInput] = useState(false);
   const [url, setUrl] = useState("");
@@ -22,13 +24,13 @@ export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, l
   const handleFile = useCallback(
     (f: File) => {
       if (f.size > maxSizeMB * 1024 * 1024) {
-        setError(`File size cannot exceed ${maxSizeMB}MB`);
+        setError(t("upload.size_exceeded").replace("{max}", String(maxSizeMB)));
         return;
       }
       setError("");
       onFileSelect(f);
     },
-    [maxSizeMB, onFileSelect]
+    [maxSizeMB, onFileSelect, t]
   );
 
   const onDrop = useCallback(
@@ -62,17 +64,17 @@ export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, l
       setUrl("");
       setUrlInput(false);
     } catch {
-      setError("Failed to fetch file. Please check the URL.");
+      setError(t("upload.fetch_fail2"));
     }
   };
 
-  const defaultLabel = accept.includes("video") ? "Drop a video here, or click to upload"
-    : accept.includes("audio") ? "Drop an audio file here, or click to upload"
-    : "Drop an image here, or click to upload";
+  const defaultLabel = accept.includes("video") ? t("upload.drop_file").replace("文件", "视频").replace("file", "video")
+    : accept.includes("audio") ? t("upload.drop_file").replace("文件", "音频").replace("file", "audio")
+    : t("upload.drop_image");
 
   const defaultHint = accept.includes("video") ? `MP4, MOV, WebM — Max ${maxSizeMB}MB`
     : accept.includes("audio") ? `MP3, WAV, M4A, FLAC — Max ${maxSizeMB}MB`
-    : `PNG, JPG, WebP — Max ${maxSizeMB}MB — Or Ctrl+V to paste`;
+    : t("upload.hint").replace("{max}", String(maxSizeMB));
 
   return (
     <div onPaste={onPaste}>
@@ -94,7 +96,7 @@ export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, l
         {selectedFile ? (
           <>
             <p className="text-base font-bold text-emerald-400">{selectedFile.name}</p>
-            <p className="mt-1 text-sm text-[#8888a0]">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB — Click to change</p>
+            <p className="mt-1 text-sm text-[#8888a0]">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB — {t("upload.change")}</p>
           </>
         ) : (
           <>
@@ -109,13 +111,13 @@ export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, l
           onClick={(e) => { e.stopPropagation(); setUrlInput(!urlInput); }}
           className="btn-secondary text-sm flex-1 justify-center"
         >
-          <Link className="h-4 w-4" /> Paste URL
+          <Link className="h-4 w-4" /> {t("upload.paste_url")}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
           className="btn-secondary text-sm flex-1 justify-center"
         >
-          <Clipboard className="h-4 w-4" /> Browse Files
+          <Clipboard className="h-4 w-4" /> {t("upload.browse")}
         </button>
       </div>
 
@@ -124,11 +126,11 @@ export function FileUpload({ onFileSelect, accept = "image/*", maxSizeMB = 10, l
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste file URL..."
+            placeholder={t("upload.url_ph")}
             className="flex-1 input-base text-sm"
             onKeyDown={(e) => e.key === "Enter" && fetchUrl()}
           />
-          <button onClick={fetchUrl} className="btn-primary text-sm px-4">Fetch</button>
+          <button onClick={fetchUrl} className="btn-primary text-sm px-4">{t("upload.fetch_url")}</button>
         </div>
       )}
 

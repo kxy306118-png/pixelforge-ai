@@ -1,15 +1,17 @@
 "use client";
-
 import { useState, useCallback, useRef, type DragEvent } from "react";
 import { Upload, Link, Clipboard } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 interface ImageUploadProps {
   onImageSelect: (file: File) => void;
   accept?: string;
   maxSizeMB?: number;
+  selectedFile?: File | null;
 }
 
-export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 }: ImageUploadProps) {
+export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10, selectedFile }: ImageUploadProps) {
+  const { t } = useI18n();
   const [drag, setDrag] = useState(false);
   const [urlInput, setUrlInput] = useState(false);
   const [url, setUrl] = useState("");
@@ -19,13 +21,13 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
   const handleFile = useCallback(
     (f: File) => {
       if (f.size > maxSizeMB * 1024 * 1024) {
-        setError(`File size cannot exceed ${maxSizeMB}MB`);
+        setError(t("upload.size_exceeded").replace("{max}", String(maxSizeMB)));
         return;
       }
       setError("");
       onImageSelect(f);
     },
-    [maxSizeMB, onImageSelect]
+    [maxSizeMB, onImageSelect, t]
   );
 
   const onDrop = useCallback(
@@ -33,7 +35,7 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
       e.preventDefault();
       setDrag(false);
       const f = e.dataTransfer.files[0];
-      if (f?.type.startsWith("image/")) handleFile(f);
+      if (f) handleFile(f);
     },
     [handleFile]
   );
@@ -42,10 +44,8 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
     (e: React.ClipboardEvent) => {
       const items = e.clipboardData.items;
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.startsWith("image/")) {
-          handleFile(items[i].getAsFile()!);
-          return;
-        }
+        const file = items[i].getAsFile();
+        if (file) { handleFile(file); return; }
       }
     },
     [handleFile]
@@ -56,16 +56,14 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
     try {
       setError("");
       const res = await fetch(url);
+      if (!res.ok) throw new Error("Fetch failed");
       const blob = await res.blob();
-      if (!blob.type.startsWith("image/")) {
-        setError("The URL does not point to a valid image");
-        return;
-      }
-      handleFile(new File([blob], "image.jpg", { type: blob.type }));
+      if (!blob.type.startsWith("image/")) throw new Error("Not an image");
+      handleFile(new File([blob], "image", { type: blob.type }));
       setUrl("");
       setUrlInput(false);
     } catch {
-      setError("Failed to fetch image. Please check the URL.");
+      setError(t("upload.fetch_fail"));
     }
   };
 
@@ -76,11 +74,7 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
         onClick={() => fileRef.current?.click()}
-        className={`cursor-pointer rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
-          drag
-            ? "border-violet-500 bg-violet-500/10"
-            : "border-[#3a3a5c] bg-[#16162a] hover:border-violet-500/50 hover:bg-[#1a1a30]"
-        }`}
+        className={`upload-zone ${drag ? "drag-over" : ""}`}
       >
         <input
           ref={fileRef}
@@ -90,8 +84,17 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
           onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
         />
         <Upload className="mx-auto h-10 w-10 text-violet-400 mb-3" />
-        <p className="text-base font-bold text-[#e8e8f0]">Drop an image here, or click to upload</p>
-        <p className="mt-2 text-sm text-[#8888a0]">PNG, JPG, WebP · Max {maxSizeMB}MB · Or Ctrl+V to paste</p>
+        {selectedFile ? (
+          <>
+            <p className="text-base font-bold text-emerald-400">{selectedFile.name}</p>
+            <p className="mt-1 text-sm text-[#8888a0]">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB — {t("upload.change")}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-base font-bold text-[#e8e8f0]">{t("upload.drop_image")}</p>
+            <p className="mt-2 text-sm text-[#8888a0]">{t("upload.hint").replace("{max}", String(maxSizeMB))}</p>
+          </>
+        )}
       </div>
 
       <div className="mt-4 flex gap-3">
@@ -99,13 +102,13 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
           onClick={(e) => { e.stopPropagation(); setUrlInput(!urlInput); }}
           className="btn-secondary text-sm flex-1 justify-center"
         >
-          <Link className="h-4 w-4" /> Paste URL
+          <Link className="h-4 w-4" /> {t("upload.paste_url")}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); fileRef.current?.click(); }}
           className="btn-secondary text-sm flex-1 justify-center"
         >
-          <Clipboard className="h-4 w-4" /> Browse
+          <Clipboard className="h-4 w-4" /> {t("upload.browse")}
         </button>
       </div>
 
@@ -114,11 +117,11 @@ export function ImageUpload({ onImageSelect, accept = "image/*", maxSizeMB = 10 
           <input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Paste image URL..."
+            placeholder={t("upload.url_ph")}
             className="flex-1 input-base text-sm"
             onKeyDown={(e) => e.key === "Enter" && fetchUrl()}
           />
-          <button onClick={fetchUrl} className="btn-primary text-sm px-4">Fetch</button>
+          <button onClick={fetchUrl} className="btn-primary text-sm px-4">{t("upload.fetch_url")}</button>
         </div>
       )}
 

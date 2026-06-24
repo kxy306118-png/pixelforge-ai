@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { tools } from "@/lib/config";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pixelforge.ai";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://pixelforgeai.club";
 
   const toolPages = tools.map((tool) => ({
     url: `${baseUrl}${tool.href}`,

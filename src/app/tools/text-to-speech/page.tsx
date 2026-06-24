@@ -1,73 +1,110 @@
 "use client";
 import { useState } from "react";
-import { ProcessingIndicator } from "@/components/processing-indicator";
 import Link from "next/link";
+import { Volume2 } from "lucide-react";
+import { ProcessingIndicator } from "@/components/processing-indicator";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function TextToSpeechPage() {
+  const { t } = useI18n();
   const [text, setText] = useState("");
-  const [voice, setVoice] = useState("female-en");
-  const [speed, setSpeed] = useState("1.0");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [voice, setVoice] = useState("alloy");
+  const [speed, setSpeed] = useState(1.0);
+  const [loading, setLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleGenerate = async () => {
     if (!text.trim()) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 2000));
-    setResult("✅ Audio generated! Full functionality requires TTS API integration. Your text has been converted to natural-sounding speech.");
-    setProcessing(false);
+    if (text.length > 5000) return;
+    setLoading(true);
+    setError("");
+    setAudioUrl("");
+    try {
+      const res = await fetch("/api/text-to-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice, speed }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "TTS failed"); }
+      const blob = await res.blob();
+      setAudioUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      setError(e.message || "TTS failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <span className="inline-block rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3">Audio Tool · AI</span>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">Text to Speech</h1>
-        <p className="mt-2 text-[#8888a0]">Convert text into natural-sounding speech in multiple languages and voices.</p>
-        <p className="mt-1 text-xs text-violet-400">⚡ Cost: ~$0.005 per request (included in paid plans)</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("tts.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("tts.desc")}</p>
       </div>
 
-      <div className="card mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">Enter text to convert to speech</label>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={6} className="input-base" placeholder="Enter the text you want to convert to speech. You can paste paragraphs, articles, or any content you want to hear spoken aloud..." />
-        <p className="mt-1 text-xs text-[#555570]">{text.length} characters · Max 5000 characters</p>
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("tts.enter_text")}</label>
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Enter the text you want to convert to speech..."
+              maxLength={5000}
+              className="input-base resize-y min-h-[140px]"
+            />
+            <p className="mt-1 text-xs text-[#8888a0]">{t("tts.char_count").replace("{count}", String(text.length))}</p>
+          </div>
 
-      <div className="grid gap-4 grid-cols-2 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Voice</label>
-          <select value={voice} onChange={(e) => setVoice(e.target.value)} className="input-base">
-            <option value="female-en">Female (English)</option>
-            <option value="male-en">Male (English)</option>
-            <option value="female-zh">Female (Chinese)</option>
-            <option value="male-zh">Male (Chinese)</option>
-            <option value="female-ja">Female (Japanese)</option>
-            <option value="female-es">Female (Spanish)</option>
-          </select>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("tts.voice")}</label>
+              <select value={voice} onChange={(e) => setVoice(e.target.value)} className="input-base">
+                <option value="alloy">Alloy</option>
+                <option value="echo">Echo</option>
+                <option value="fable">Fable</option>
+                <option value="onyx">Onyx</option>
+                <option value="nova">Nova</option>
+                <option value="shimmer">Shimmer</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("tts.speed")}</label>
+              <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} className="input-base">
+                <option value={0.5}>0.5×</option>
+                <option value={0.75}>0.75×</option>
+                <option value={1}>1×</option>
+                <option value={1.25}>1.25×</option>
+                <option value={1.5}>1.5×</option>
+                <option value={2}>2×</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button onClick={handleGenerate} disabled={!text.trim() || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("tts.generating") : <><Volume2 className="h-5 w-5" /> {t("tts.generate")}</>}
+            </button>
+            {!text.trim() && <p className="mt-2 text-xs text-[#8888a0]">{t("tts.no_text_tip")}</p>}
+          </div>
+
+          {loading && <ProcessingIndicator message={t("tts.generating")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {audioUrl && (
+            <div className="card text-center">
+              <audio controls src={audioUrl} className="mx-auto w-full max-w-lg" />
+              <a href={audioUrl} download="speech.mp3" className="btn-primary mt-4 inline-flex text-sm">{t("result.download")}</a>
+            </div>
+          )}
+
+          <div className="text-center text-sm text-[#8888a0]">
+            {t("tts.also_try")} <Link href="/tools/speech-to-text" className="text-violet-400 hover:underline">{t("tts.reverse_link")}</Link> ({t("tts.reverse_desc")})
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Speed</label>
-          <select value={speed} onChange={(e) => setSpeed(e.target.value)} className="input-base">
-            <option value="0.75">Slow (0.75x)</option>
-            <option value="1.0">Normal (1.0x)</option>
-            <option value="1.25">Fast (1.25x)</option>
-            <option value="1.5">Very Fast (1.5x)</option>
-          </select>
-        </div>
+        <AdSidebar />
       </div>
-
-      <button onClick={handleStart} disabled={processing || !text.trim()} className="btn-primary">
-      {!text.trim() && <p className="mt-2 text-xs text-[#555570]">Enter text above to enable the button</p>}
-        {processing ? "Generating speech..." : "Generate Speech"}
-      </button>
-
-      {processing && <ProcessingIndicator message="AI is generating speech..." />}
-      {result && <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5"><p className="text-sm text-[#8888a0]">{result}</p></div>}
-
-      <p className="mt-4 text-center text-xs text-[#555570]">
-        Also try <Link href="/tools/speech-to-text" className="text-violet-400 hover:text-violet-300">Speech to Text</Link> for the reverse
-      </p>
     </div>
   );
 }

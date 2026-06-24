@@ -1,68 +1,104 @@
 "use client";
 import { useState } from "react";
+import { PenLine } from "lucide-react";
 import { ProcessingIndicator } from "@/components/processing-indicator";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function AiWriterPage() {
+  const { t } = useI18n();
   const [topic, setTopic] = useState("");
-  const [type, setType] = useState("product-description");
+  const [type, setType] = useState("marketing");
   const [tone, setTone] = useState("professional");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleGenerate = async () => {
     if (!topic.trim()) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 2000));
-    setResult(`✅ Copy generated! Full functionality requires LLM API integration.\n\n--- Sample Output ---\n\n${topic}\n\nProfessional marketing copy tailored to your specifications would appear here, ready to copy and use in your campaigns.`);
-    setProcessing(false);
+    setLoading(true);
+    setError("");
+    setResult("");
+    try {
+      const res = await fetch("/api/ai-writer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, type, tone }),
+      });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Writing failed"); }
+      const data = await res.json();
+      setResult(data.text || "No result returned");
+    } catch (e: any) {
+      setError(e.message || "Writing failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <span className="inline-block rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-400 mb-3">Text Tool · AI</span>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">AI Copywriter</h1>
-        <p className="mt-2 text-[#8888a0]">Generate marketing copy, product descriptions, social captions, and more with AI.</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("writer.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("writer.desc")}</p>
       </div>
 
-      <div className="card mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">What do you want to write?</label>
-        <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={5} className="input-base" placeholder="Describe your product, service, or topic. For example: 'A wireless Bluetooth speaker with 20-hour battery life, waterproof, under $50. Target audience: young professionals who love outdoor activities.'" />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          {/* Topic */}
+          <div>
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("writer.topic_label")}</label>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="e.g., A new AI-powered photo editing app for mobile..."
+              className="input-base resize-y min-h-[120px]"
+            />
+          </div>
 
-      <div className="grid gap-4 grid-cols-2 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Content type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} className="input-base">
-            <option value="product-description">Product Description</option>
-            <option value="social-post">Social Media Post</option>
-            <option value="ad-copy">Ad Copy</option>
-            <option value="email">Email Newsletter</option>
-            <option value="blog-intro">Blog Introduction</option>
-            <option value="seo-title">SEO Title & Meta</option>
-          </select>
+          {/* Type + Tone */}
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("writer.type")}</label>
+              <select value={type} onChange={(e) => setType(e.target.value)} className="input-base">
+                <option value="marketing">Marketing Copy</option>
+                <option value="product">Product Description</option>
+                <option value="social">Social Media</option>
+                <option value="email">Email</option>
+                <option value="blog">Blog Post</option>
+                <option value="ad">Ad Copy</option>
+              </select>
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("writer.tone")}</label>
+              <select value={tone} onChange={(e) => setTone(e.target.value)} className="input-base">
+                <option value="professional">Professional</option>
+                <option value="casual">Casual</option>
+                <option value="playful">Playful</option>
+                <option value="luxury">Luxury</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Generate */}
+          <div className="text-center">
+            <button onClick={handleGenerate} disabled={!topic.trim() || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("writer.writing") : <><PenLine className="h-5 w-5" /> {t("writer.generate")}</>}
+            </button>
+            {!topic.trim() && <p className="mt-2 text-xs text-[#8888a0]">{t("writer.no_topic_tip")}</p>}
+          </div>
+
+          {/* Result */}
+          {loading && <ProcessingIndicator message={t("writer.writing")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {result && (
+            <div className="card">
+              <div className="whitespace-pre-wrap text-[#e8e8f0] text-sm leading-relaxed">{result}</div>
+            </div>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Tone</label>
-          <select value={tone} onChange={(e) => setTone(e.target.value)} className="input-base">
-            <option value="professional">Professional</option>
-            <option value="casual">Casual & Friendly</option>
-            <option value="persuasive">Persuasive</option>
-            <option value="humorous">Humorous</option>
-            <option value="luxury">Luxury & Premium</option>
-            <option value="urgent">Urgent / FOMO</option>
-          </select>
-        </div>
+        <AdSidebar />
       </div>
-
-      <button onClick={handleStart} disabled={processing || !topic.trim()} className="btn-primary">
-      {!topic.trim() && <p className="mt-2 text-xs text-[#555570]">Enter a topic above to enable the button</p>}
-        {processing ? "Writing..." : "Generate Copy"}
-      </button>
-
-      {processing && <ProcessingIndicator message="AI is crafting your copy..." />}
-      {result && <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5 whitespace-pre-line"><p className="text-sm text-[#8888a0]">{result}</p></div>}
     </div>
   );
 }

@@ -4,20 +4,17 @@ import { ImageUpload } from "@/components/image-upload";
 import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
 import { AdSidebar } from "@/components/ads";
-
-const formats = [
-  { label: "PNG", value: "png" },
-  { label: "JPEG", value: "jpeg" },
-  { label: "WebP", value: "webp" },
-  { label: "AVIF", value: "avif" },
-];
+import { useI18n } from "@/lib/i18n";
 
 export default function ConvertPage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
-  const [format, setFormat] = useState("png");
+  const [target, setTarget] = useState("webp");
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{ originalUrl: string; resultUrl: string } | null>(null);
+  const [result, setResult] = useState<{ originalUrl: string; resultUrl: string; originalSize: string; resultSize: string } | null>(null);
   const [error, setError] = useState("");
+
+  const fmt = (b: number) => (b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / (1024 * 1024)).toFixed(2)} MB`);
 
   const processImage = useCallback(async (f: File) => {
     setFile(f);
@@ -27,50 +24,66 @@ export default function ConvertPage() {
     try {
       const fd = new FormData();
       fd.append("image", f);
-      fd.append("format", format);
+      fd.append("targetFormat", target);
       const res = await fetch("/api/convert", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("转换失败");
+      if (!res.ok) {
+        let msg = t("convert.fail");
+        try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
+        throw new Error(msg);
+      }
       const blob = await res.blob();
-      setResult({ originalUrl: URL.createObjectURL(f), resultUrl: URL.createObjectURL(blob) });
+      if (blob.size === 0) throw new Error("Empty response from server");
+      setResult({
+        originalUrl: URL.createObjectURL(f),
+        resultUrl: URL.createObjectURL(blob),
+        originalSize: fmt(f.size),
+        resultSize: fmt(blob.size),
+      });
     } catch (e: any) {
-      setError(e.message || "转换失败，请重试");
+      setError(e.message || t("convert.fail"));
     } finally {
       setProcessing(false);
     }
-  }, [format]);
+  }, [target, t]);
 
   const reset = () => { setFile(null); setResult(null); setError(""); };
+
+  const formats = ["webp", "png", "jpeg", "avif"] as const;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="text-center mb-8">
-        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">格式转换</span></h1>
-        <p className="mt-3 text-[#8888a0]">PNG、JPG、WebP、AVIF 格式互转，完全免费</p>
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("convert.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("convert.desc")}</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
         <div className="space-y-6">
           {!result && (
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-sm text-[#8888a0] font-semibold">目标格式：</span>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <span className="text-sm text-[#8888a0] font-semibold">{t("convert.target_format")}</span>
               {formats.map((f) => (
-                <button key={f.value} onClick={() => setFormat(f.value)} className={format === f.value ? "btn-option active" : "btn-option"}>
-                  {f.label}
-                </button>
+                <button key={f} onClick={() => setTarget(f)} className={`btn-option ${target === f ? "active" : ""}`}>{f.toUpperCase()}</button>
               ))}
             </div>
           )}
-
           {!file && !result && <ImageUpload onImageSelect={processImage} />}
-          {processing && <ProcessingIndicator message="正在转换格式..." />}
+          {processing && <ProcessingIndicator message={t("convert.processing")} />}
           {error && (
             <div className="text-center py-10">
               <p className="text-red-400 mb-4">{error}</p>
-              <button onClick={reset} className="btn-primary">重新上传</button>
+              <button onClick={reset} className="btn-primary">{t("convert.reset")}</button>
             </div>
           )}
           {result && (
-            <ResultPreview originalUrl={result.originalUrl} resultUrl={result.resultUrl} fileName={`converted.${format}`} onReset={reset} />
+            <ResultPreview
+              originalUrl={result.originalUrl}
+              resultUrl={result.resultUrl}
+              originalSize={result.originalSize}
+              resultSize={result.resultSize}
+              fileName={`converted.${target}`}
+              onReset={reset}
+            />
           )}
         </div>
         <AdSidebar />

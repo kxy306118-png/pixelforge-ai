@@ -2,69 +2,84 @@
 import { useState } from "react";
 import { FileUpload } from "@/components/file-upload";
 import { ProcessingIndicator } from "@/components/processing-indicator";
-import Link from "next/link";
+import { AdSidebar } from "@/components/ads";
+import { useI18n } from "@/lib/i18n";
 
 export default function AudioEnhancePage() {
+  const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
-  const [enhanceType, setEnhanceType] = useState("denoise");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
+  const [enhanceType, setEnhanceType] = useState("full");
+  const [loading, setLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [error, setError] = useState("");
 
-  const handleStart = async () => {
+  const handleEnhance = async () => {
     if (!file) return;
-    setProcessing(true);
-    setResult(null);
-    await new Promise((r) => setTimeout(r, 3000));
-    setResult("✅ Audio enhanced! Full functionality requires API integration. Background noise removed and audio quality improved.");
-    setProcessing(false);
+    setLoading(true);
+    setError("");
+    setAudioUrl("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", enhanceType);
+      const res = await fetch("/api/audio-enhance", { method: "POST", body: fd });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || "Enhancement failed"); }
+      const blob = await res.blob();
+      setAudioUrl(URL.createObjectURL(blob));
+    } catch (e: any) {
+      setError(e.message || "Enhancement failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const types = [
+    { value: "noise", labelKey: "ae.noise" },
+    { value: "voice", labelKey: "ae.voice_enhance" },
+    { value: "loudness", labelKey: "ae.loudness" },
+    { value: "full", labelKey: "ae.full" },
+  ];
+
   return (
-    <div className="mx-auto max-w-4xl px-5 py-10">
-      <div className="mb-8">
-        <span className="inline-block rounded-full bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400 mb-3">Audio Tool · AI</span>
-        <h1 className="text-3xl font-black text-[#e8e8f0]">Audio Enhance</h1>
-        <p className="mt-2 text-[#8888a0]">Remove background noise, enhance clarity, and improve overall audio quality.</p>
-        <p className="mt-1 text-xs text-violet-400">⚡ Cost: ~$0.01 per minute (included in paid plans)</p>
+    <div className="mx-auto max-w-6xl px-5 py-10">
+      <div className="text-center mb-8">
+        <h1 className="text-3xl sm:text-4xl font-black"><span className="gradient-text">{t("ae.title")}</span></h1>
+        <p className="mt-3 text-[#8888a0]">{t("ae.desc")}</p>
       </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-2">Upload audio file</label>
-        <FileUpload onFileSelect={setFile} accept="audio/*" maxSizeMB={100} label="Drop an audio file here, or click to upload" hint="MP3, WAV, M4A, FLAC, OGG — Max 100MB" selectedFile={file} />
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_200px] gap-6">
+        <div className="space-y-6">
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("ae.upload_label")}</label>
+            <FileUpload onFileSelect={(f) => { setFile(f); setAudioUrl(""); setError(""); }} accept="audio/*" maxSizeMB={100} selectedFile={file} />
+          </div>
 
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-[#8888a0] mb-1.5">Enhancement type</label>
-        <div className="flex gap-3 flex-wrap">
-          {[
-            { value: "denoise", label: "Noise Removal" },
-            { value: "enhance", label: "Voice Enhancement" },
-            { value: "loudness", label: "Loudness Normalize" },
-            { value: "full", label: "Full Enhancement" },
-          ].map((opt) => (
-            <button key={opt.value} onClick={() => setEnhanceType(opt.value)} className={`btn-option ${enhanceType === opt.value ? "active" : ""}`}>
-              {opt.label}
+          <div>
+            <label className="block text-sm font-semibold text-[#e8e8f0] mb-2">{t("ae.type_label")}</label>
+            <div className="flex flex-wrap gap-2">
+              {types.map((tp) => (
+                <button key={tp.value} onClick={() => setEnhanceType(tp.value)} className={`btn-option ${enhanceType === tp.value ? "active" : ""}`}>{t(tp.labelKey)}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="text-center">
+            <button onClick={handleEnhance} disabled={!file || loading} className="btn-primary text-base px-8 py-3">
+              {loading ? t("ae.enhancing") : <>{t("ae.enhance")}</>}
             </button>
-          ))}
+            {!file && <p className="mt-2 text-xs text-[#8888a0]">{t("ae.no_file_tip")}</p>}
+          </div>
+
+          {loading && <ProcessingIndicator message={t("ae.enhancing")} />}
+          {error && <div className="text-center text-red-400">{error}</div>}
+          {audioUrl && (
+            <div className="card text-center">
+              <audio controls src={audioUrl} className="mx-auto w-full max-w-lg" />
+              <a href={audioUrl} download="enhanced.mp3" className="btn-primary mt-4 inline-flex text-sm">{t("result.download")}</a>
+            </div>
+          )}
         </div>
-      </div>
-
-      <button onClick={handleStart} disabled={processing || !file} className="btn-primary">
-      {!file && <p className="mt-2 text-xs text-[#555570]">Upload a file above to enable the button</p>}
-        {processing ? "Enhancing audio..." : "Enhance Audio"}
-      </button>
-
-      {processing && <ProcessingIndicator message="AI is enhancing your audio..." />}
-      {result && <div className="card mt-6 border-emerald-500/20 bg-emerald-500/5"><p className="text-sm text-[#8888a0]">{result}</p></div>}
-
-      <div className="mt-8 card">
-        <h3 className="font-bold text-[#e8e8f0] mb-2">💡 Tips</h3>
-        <ul className="text-sm text-[#8888a0] space-y-1">
-          <li>• <strong>Noise Removal:</strong> Best for recordings with background hum, fan noise, or traffic</li>
-          <li>• <strong>Voice Enhancement:</strong> Makes speech clearer and more present</li>
-          <li>• <strong>Loudness Normalize:</strong> Adjusts volume to professional broadcast standards</li>
-          <li>• <strong>Full Enhancement:</strong> Applies all enhancements together</li>
-        </ul>
+        <AdSidebar />
       </div>
     </div>
   );

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -36,6 +35,9 @@ export async function POST(req: NextRequest) {
 
     const bytes = await imageFile!.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Dynamic import sharp for Vercel serverless compatibility
+    const sharp = (await import("sharp")).default;
 
     // Verify it's a valid image and prevent decompression bombs
     const metadata = await sharp(buffer, { limitInputPixels: 100000000 }).metadata();

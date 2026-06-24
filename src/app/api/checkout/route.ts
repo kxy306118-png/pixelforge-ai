@@ -6,96 +6,121 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 
 /**
- * Create a LemonSqueezy checkout URL for a subscription plan.
- *
- * Requires environment variables:
- * - LEMONSQUEEZY_API_KEY
- * - LEMONSQUEEZY_STORE_ID
- * - LEMON_VARIANT_STARTER / LEMON_VARIANT_PRO
+ * Create a CREEM checkout URL for a subscription plan.
+ * Resilient to DB failures — payment flow always works.
  */
-const PLAN_VARIANTS: Record<string, string> = {
-  starter: process.env.LEMON_VARIANT_STARTER || "",
-  pro: process.env.LEMON_VARIANT_PRO || "",
+const PLAN_PRODUCTS: Record<string, string> = {
+  starter: process.env.CREEM_PRODUCT_STARTER || "prod_2yGGGw2iu1SH47Gx3eTEKd",
+  pro: process.env.CREEM_PRODUCT_PRO || "prod_2ct7LjqSrc8jm0FHdBCkME",
 };
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Please sign in first." }, { status: 401 });
+    // 1. Try to get session — if DB is down, this might fail
+    let session;
+    let userId = "";
+    let userEmail = "";
+    try {
+      session = await getServerSession(authOptions);
+      userId = (session?.user as any)?.id || "";
+      userEmail = (session?.user as any)?.email || "";
+    } catch (authErr) {
+      console.warn("Auth check failed (DB unavailable):", authErr);
     }
 
+    // 2. Parse request body
     const { plan } = await req.json();
-    if (!plan || !PLAN_VARIANTS[plan]) {
+    if (!plan || !PLAN_PRODUCTS[plan]) {
       return NextResponse.json({ error: "Invalid plan. Choose 'starter' or 'pro'." }, { status: 400 });
     }
 
-    // Check for existing active subscription
-    const userId = (session.user as any).id;
-    const existingSub = await prisma.subscription.findFirst({
-      where: { userId, status: "active" },
-    });
-    if (existingSub) {
-      return NextResponse.json(
-        { error: "You already have an active subscription. Manage it in your billing page." },
-        { status: 409 }
-      );
+    // 3. Check for existing active subscription (skip if DB unavailable)
+    if (userId) {
+      try {
+        const existingSub = await prisma.subscription.findFirst({
+          where: { userId, status: "active" },
+        });
+        if (existingSub) {
+          return NextResponse.json(
+            { error: "You already have an active subscription. Manage it in your billing page." },
+            { status: 409 }
+          );
+        }
+      } catch (dbErr) {
+        console.warn("DB subscription check skipped:", dbErr);
+      }
     }
 
-    const apiKey = process.env.LEMONSQUEEZY_API_KEY;
-    const storeId = process.env.LEMONSQUEEZY_STORE_ID;
-    if (!apiKey || !storeId) {
+    // 4. Call CREEM API
+    const apiKey = process.env.CREEM_API_KEY;
+    if (!apiKey) {
       return NextResponse.json(
         { error: "Payment system is not configured yet. Please try again later." },
         { status: 503 }
       );
     }
 
-    // Create checkout via LemonSqueezy API
-    const resp = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
+    // Build success URL — CREEM requires valid public URL format
+    const vercelUrl = process.env.VERCEL_URL;
+    const nextauthUrl = process.env.NEXTAUTH_URL;
+    const origin = req.headers.get("origin") || "";
+    let baseUrl = "https://pixelforgeai.club"; // safe default
+    if (origin && !origin.includes("localhost") && !origin.includes("127.0.0.1")) {
+      baseUrl = origin;
+    } else if (nextauthUrl && nextauthUrl.startsWith("https://")) {
+      baseUrl = nextauthUrl;
+    } else if (vercelUrl) {
+      baseUrl = `https://${vercelUrl}`;
+    }
+
+    console.log("CREEM checkout request:", {
+      plan,
+      productId: PLAN_PRODUCTS[plan],
+      baseUrl,
+      userId: userId || "anonymous",
+    });
+
+    const resp = await fetch("https://api.creem.io/v1/checkouts", {
       method: "POST",
       headers: {
-        Accept: "application/json",
-        "Content-Type": "application/vnd.api+json",
-        Authorization: `Bearer ${apiKey}`,
+        "x-api-key": apiKey,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        data: {
-          type: "checkouts",
-          attributes: {
-            product_options: {
-              redirect_url: `${process.env.NEXTAUTH_URL || ""}/dashboard?upgraded=true`,
-            },
-            checkout_options: {
-              embed: false,
-            },
-            checkout_data: {
-              email: session.user.email,
-              custom: {
-                user_id: (session.user as any).id,
-              },
-            },
-          },
-          relationships: {
-            store: {
-              data: { type: "stores", id: storeId },
-            },
-            variant: {
-              data: { type: "variants", id: PLAN_VARIANTS[plan] },
-            },
-          },
+        product_id: PLAN_PRODUCTS[plan],
+        success_url: `${baseUrl}/dashboard?upgraded=true`,
+        customer: {
+          email: userEmail,
+        },
+        metadata: {
+          user_id: userId,
+          plan: plan,
         },
       }),
     });
 
     if (!resp.ok) {
-      const errBody = await resp.text();
-      console.error("LemonSqueezy checkout error:", errBody);
-      return NextResponse.json({ error: "Failed to create checkout session." }, { status: 502 });
+      let errDetail = "";
+      try { errDetail = await resp.text(); } catch {}
+      console.error("CREEM checkout error:", resp.status, errDetail);
+
+      // Return the actual CREEM error to help debug
+      let userMessage = "Failed to create checkout session. ";
+      if (resp.status === 401) userMessage += "Payment API key is invalid.";
+      else if (resp.status === 403) userMessage += "Payment provider review pending — your store may not be approved yet.";
+      else if (resp.status === 404) userMessage += "Product not found — the subscription plan may not be configured correctly.";
+      else if (resp.status === 422) userMessage += "Invalid request data. Please contact support.";
+      else userMessage += `Payment provider returned error ${resp.status}. Please try again later.`;
+
+      return NextResponse.json({ error: userMessage, detail: errDetail }, { status: 502 });
     }
 
     const data = await resp.json();
-    const checkoutUrl = data.data.attributes.url;
+    const checkoutUrl = data.checkout_url || data.url;
+
+    if (!checkoutUrl) {
+      return NextResponse.json({ error: "No checkout URL returned from payment provider." }, { status: 502 });
+    }
 
     return NextResponse.json({ url: checkoutUrl });
   } catch (error: unknown) {
