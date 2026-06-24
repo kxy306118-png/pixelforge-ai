@@ -11,8 +11,10 @@ export async function POST(req: NextRequest) {
     if (limited) return limited;
 
     const { name, email: rawEmail, password } = await req.json();
+    if (!name || !rawEmail || !password) {
+      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
+    }
     const email = rawEmail.toLowerCase().trim();
-    if (!name || !email || !password) {
       return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
