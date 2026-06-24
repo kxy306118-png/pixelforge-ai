@@ -89,9 +89,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         product_id: PLAN_PRODUCTS[plan],
         success_url: `${baseUrl}/dashboard?upgraded=true`,
-        customer: {
-          email: userEmail,
-        },
+        ...(userEmail ? { customer: { email: userEmail } } : {}),
         metadata: {
           user_id: userId,
           plan: plan,
