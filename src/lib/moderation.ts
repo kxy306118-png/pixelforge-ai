@@ -3,76 +3,115 @@
  * Required by CREEM for all AI image and video generation platforms.
  * Docs: https://docs.creem.io/features/moderation
  *
- * Screens user prompts before they reach AI models to ensure
+ * Screens user prompts BEFORE they reach AI models to ensure
  * no prohibited (NSFW, adult, violent) content is generated.
+ *
+ * Key policy requirements:
+ * - Treat both "deny" AND "flag" as a block (do not allow flagged prompts)
+ * - Fail CLOSED: if moderation API is unreachable, block the request
+ * - Set a timeout (5 seconds) and return error if exceeded
+ * - Screen the prompt BEFORE generation, not the output after
  */
 
 export interface ModerationResult {
   allowed: boolean;
   reason?: string;
-  categories?: string[];
 }
 
 /**
  * Check if a text prompt is safe for AI generation using CREEM's Moderation API.
- * Returns { allowed: true } if the prompt passes moderation.
- * Returns { allowed: false, reason: "..." } if flagged.
  *
- * Gracefully degrades to allow-all if the API is unavailable or not configured.
+ * Returns { allowed: true } if the prompt passes moderation.
+ * Returns { allowed: false, reason: "..." } if denied or flagged.
+ *
+ * CRITICAL: This function fails CLOSED. If the moderation API is unreachable,
+ * it returns { allowed: false } to block potentially unsafe content.
+ * This is mandatory per CREEM's compliance requirements.
  */
 export async function moderateContent(
   prompt: string,
-  type: "text_to_image" | "text_to_video" | "text" = "text_to_image"
+  type?: "text_to_image" | "text_to_video" | "text",
+  externalId?: string
 ): Promise<ModerationResult> {
-  const apiKey = process.env.CREEM_API_KEY;
+  const apiKey = "creem_1Fq0MnS70A85MKZeBkWgIt";
+
   if (!apiKey) {
-    console.warn("[moderation] CREEM_API_KEY not set — skipping moderation");
-    return { allowed: true };
+    // Fail CLOSED — no API key means no moderation, which means no generation
+    console.error("[moderation] CREEM_API_KEY not set — blocking request (fail-closed)");
+    return {
+      allowed: false,
+      reason: "Content safety check is not configured. Please try again later.",
+    };
   }
 
+  // Generate external_id for tracking if not provided
+  const id = externalId || `prompt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
   try {
-    const resp = await fetch("https://api.creem.io/v1/moderation", {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000); // 5-second timeout per CREEM docs
+
+    const resp = await fetch("https://api.creem.io/v1/moderation/prompt", {
       method: "POST",
       headers: {
         "x-api-key": apiKey,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        input: prompt,
-        type: type,
+        prompt: prompt,
+        external_id: id,
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!resp.ok) {
       const errText = await resp.text().catch(() => "");
-      console.warn(`[moderation] API returned ${resp.status}: ${errText}`);
-
-      // If moderation API is down, allow the request to proceed
-      // so that legitimate users aren't blocked by API outages
-      // If moderation API is down or not configured, allow the request
-      // so that legitimate users aren't blocked by API outages or config issues.
-      // We only block if the API explicitly returns flagged=true.
-      console.warn(`[moderation] API returned ${resp.status}, allowing request (fail-open)`);
-      return { allowed: true };
+      console.error(`[moderation] API returned ${resp.status}: ${errText}`);
+      // Fail CLOSED on API errors
+      return {
+        allowed: false,
+        reason: "Content safety check failed. Please try again in a moment.",
+      };
     }
 
     const data = await resp.json();
 
-    // CREEM moderation response format:
-    // { flagged: boolean, categories?: string[], ... }
-    if (data.flagged || data.blocked) {
-      const categories = data.categories || data.flagged_categories || [];
+    // CREEM moderation response: { decision: "allow" | "deny" | "flag" }
+    // Both "deny" and "flag" must be treated as blocked per CREEM policy
+    if (data.decision === "deny") {
       return {
         allowed: false,
-        reason: "This prompt was flagged by our content safety system. Please modify your prompt to comply with our usage policies.",
-        categories,
+        reason: "Your prompt was rejected because it violates our content policy. Please revise and try again.",
       };
     }
 
-    return { allowed: true, categories: data.categories || [] };
-  } catch (err) {
-    console.warn("[moderation] Error calling moderation API:", err);
-    // Gracefully degrade — allow on network errors
+    if (data.decision === "flag") {
+      // CREEM recommends treating "flag" exactly like "deny"
+      return {
+        allowed: false,
+        reason: "Your prompt could not be processed. Please revise and try again.",
+      };
+    }
+
+    // decision === "allow" — safe to generate
     return { allowed: true };
+  } catch (err: any) {
+    // This covers: network errors, timeouts (AbortError), JSON parse errors
+    // Fail CLOSED — do NOT allow generation without moderation
+    console.error("[moderation] Error calling moderation API:", err.message || err);
+
+    if (err.name === "AbortError") {
+      return {
+        allowed: false,
+        reason: "Content safety check timed out. Please try again.",
+      };
+    }
+
+    return {
+      allowed: false,
+      reason: "Content safety check is temporarily unavailable. Please try again in a moment.",
+    };
   }
 }
