@@ -16,7 +16,7 @@ interface EmailParams {
 }
 
 export async function sendEmail({ to, subject, html }: EmailParams): Promise<boolean> {
-  const apiKey = process.env.RESEND_API_KEY;
+  const apiKey = process.env.RESEND_API_KEY || "re_j9hUkWwH_5AhYdE6puji6r32NdxJBR4kW";
   const fromEmail = process.env.FROM_EMAIL || "PixelForge AI <noreply@pixelforgeai.club>";
 
   if (!apiKey) {
