@@ -22,11 +22,11 @@ export const authOptions: NextAuthOptions = {
         return { id: user.id, name: user.name, email: user.email, role: user.role, plan: user.plan };
       },
     }),
-    // Google OAuth — requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET env vars
-    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+    // Google OAuth
+    ...(process.env.GOOGLE_CLIENT_ID || "311363214467-83p1r4plvs9miopah6mbp8kj140n5ugu.apps.googleusercontent.com"
       ? [GoogleProvider({
-          clientId: process.env.GOOGLE_CLIENT_ID,
-          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          clientId: process.env.GOOGLE_CLIENT_ID || "311363214467-83p1r4plvs9miopah6mbp8kj140n5ugu.apps.googleusercontent.com",
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET || "GOCSPX...Nb",
           allowDangerousEmailAccountLinking: true,
         })]
       : []),
