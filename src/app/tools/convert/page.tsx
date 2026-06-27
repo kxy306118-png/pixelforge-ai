@@ -5,6 +5,7 @@ import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
 import { AdSidebar } from "@/components/ads";
 import { useI18n } from "@/lib/i18n";
+import { convertImage } from "@/lib/client-image";
 
 export default function ConvertPage() {
   const { t } = useI18n();
@@ -22,17 +23,8 @@ export default function ConvertPage() {
     setError("");
     setResult(null);
     try {
-      const fd = new FormData();
-      fd.append("image", f);
-      fd.append("targetFormat", target);
-      const res = await fetch("/api/convert", { method: "POST", body: fd });
-      if (!res.ok) {
-        let msg = t("convert.fail");
-        try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
-        throw new Error(msg);
-      }
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error("Empty response from server");
+      const blob = await convertImage(f, target);
+      if (blob.size === 0) throw new Error("Failed to convert image");
       setResult({
         originalUrl: URL.createObjectURL(f),
         resultUrl: URL.createObjectURL(blob),

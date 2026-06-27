@@ -5,6 +5,7 @@ import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
 import { AdSidebar } from "@/components/ads";
 import { useI18n } from "@/lib/i18n";
+import { resizeImage } from "@/lib/client-image";
 
 const PRESETS: Record<string, [number, number]> = {
   avatar: [512, 512],
@@ -38,18 +39,8 @@ export default function ResizePage() {
     setError("");
     setResult(null);
     try {
-      const fd = new FormData();
-      fd.append("image", f);
-      fd.append("width", String(width));
-      fd.append("height", String(height));
-      const res = await fetch("/api/resize", { method: "POST", body: fd });
-      if (!res.ok) {
-        let msg = t("resize.fail");
-        try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
-        throw new Error(msg);
-      }
-      const blob = await res.blob();
-      if (blob.size === 0) throw new Error("Empty response from server");
+      const blob = await resizeImage(f, width, height, "cover");
+      if (blob.size === 0) throw new Error("Failed to resize image");
       setResult({
         originalUrl: URL.createObjectURL(f),
         resultUrl: URL.createObjectURL(blob),
@@ -86,7 +77,7 @@ export default function ResizePage() {
               </div>
               <div className="flex items-center justify-center gap-3">
                 <input type="number" value={width} onChange={(e) => { setWidth(Number(e.target.value)); setPreset("custom"); }} placeholder={t("resize.width_ph")} className="input-base w-28 text-center" />
-                <span className="text-[#8888a0]">××</span>
+                <span className="text-[#8888a0]">×</span>
                 <input type="number" value={height} onChange={(e) => { setHeight(Number(e.target.value)); setPreset("custom"); }} placeholder={t("resize.height_ph")} className="input-base w-28 text-center" />
                 <span className="text-sm text-[#8888a0]">{t("resize.px")}</span>
               </div>

@@ -5,6 +5,7 @@ import { ResultPreview } from "@/components/result-preview";
 import { ProcessingIndicator } from "@/components/processing-indicator";
 import { AdSidebar } from "@/components/ads";
 import { useI18n } from "@/lib/i18n";
+import { enhanceImage } from "@/lib/client-image";
 
 export default function EnhancePage() {
   const { t } = useI18n();
@@ -21,11 +22,7 @@ export default function EnhancePage() {
     setError("");
     setResult(null);
     try {
-      const fd = new FormData();
-      fd.append("image", f);
-      const res = await fetch("/api/enhance", { method: "POST", body: fd });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || t("enhance.fail")); }
-      const blob = await res.blob();
+      const blob = await enhanceImage(f);
       setResult({
         originalUrl: URL.createObjectURL(f),
         resultUrl: URL.createObjectURL(blob),
@@ -64,7 +61,7 @@ export default function EnhancePage() {
               resultUrl={result.resultUrl}
               originalSize={result.originalSize}
               resultSize={result.resultSize}
-              fileName="enhanced.png"
+              fileName="enhanced.jpg"
               onReset={reset}
             />
           )}

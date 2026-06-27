@@ -28,6 +28,55 @@ function isValidImage(buffer: Buffer): boolean {
   return false;
 }
 
+/** Read image width/height from binary header — no sharp needed */
+function getImageDimensions(buffer: Buffer): { width: number; height: number } | null {
+  try {
+    // PNG: width at bytes 16-19, height at bytes 20-23 (big-endian)
+    if (buffer[0] === 0x89 && buffer[1] === 0x50) {
+      return {
+        width: buffer.readUInt32BE(16),
+        height: buffer.readUInt32BE(20),
+      };
+    }
+    // JPEG: parse SOF marker
+    if (buffer[0] === 0xff && buffer[1] === 0xd8) {
+      let offset = 2;
+      while (offset < buffer.length - 1) {
+        if (buffer[offset] !== 0xff) { offset++; continue; }
+        const marker = buffer[offset + 1];
+        if (marker >= 0xc0 && marker <= 0xc3) {
+          return {
+            height: buffer.readUInt16BE(offset + 5),
+            width: buffer.readUInt16BE(offset + 7),
+          };
+        }
+        offset += 2 + buffer.readUInt16BE(offset + 2);
+      }
+    }
+    // WebP VP8/VP8L/VP8X
+    if (buffer.slice(0, 4).toString("ascii") === "RIFF" && buffer.slice(8, 12).toString("ascii") === "WEBP") {
+      const chunk = buffer.slice(12, 16).toString("ascii");
+      if (chunk === "VP8 ") {
+        return { width: buffer.readUInt16LE(26) & 0x3fff, height: buffer.readUInt16LE(28) & 0x3fff };
+      }
+      if (chunk === "VP8L") {
+        const b0 = buffer[21], b1 = buffer[22], b2 = buffer[23], b3 = buffer[24];
+        return { width: 1 + ((b1 & 0x3f) << 8 | b0), height: 1 + ((b3 & 0x0f) << 10 | b2 << 2 | (b1 & 0xc0) >> 6) };
+      }
+      if (chunk === "VP8X") {
+        return { width: 1 + (buffer[24] | buffer[25] << 8 | buffer[26] << 16), height: 1 + (buffer[27] | buffer[28] << 8 | buffer[29] << 16) };
+      }
+    }
+    // GIF
+    if (buffer.slice(0, 3).toString("ascii") === "GIF") {
+      return { width: buffer.readUInt16LE(6), height: buffer.readUInt16LE(8) };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   let reserved = false;
   let userId: string | undefined;
@@ -77,14 +126,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid image file. The file appears to be corrupted or not a real image." }, { status: 400 });
     }
 
-    // Validate image dimensions with sharp
-    try {
-      const sharp = (await import("sharp")).default;
-      const metadata = await sharp(buffer, { limitInputPixels: 100000000 }).metadata();
-      if (!metadata.width || !metadata.height) {
-        throw new Error("Invalid image dimensions");
-      }
-    } catch {
+    // Validate image dimensions from header bytes (no sharp needed)
+    const dims = getImageDimensions(buffer);
+    if (!dims) {
       await refundUsage(userId!);
       return NextResponse.json({ error: "The uploaded file is not a valid image." }, { status: 400 });
     }
