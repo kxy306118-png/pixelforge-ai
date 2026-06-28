@@ -24,14 +24,17 @@ export async function DELETE(req: NextRequest) {
     const { userId, deleteAllTest } = body;
 
     if (deleteAllTest) {
+      // Clean up related data first (foreign key constraints)
+      await prisma.passwordReset.deleteMany({}).catch(() => {});
+      await prisma.usage.deleteMany({}).catch(() => {});
+      await prisma.contact.deleteMany({}).catch(() => {});
+      await prisma.account.deleteMany({}).catch(() => {});
+      await prisma.session.deleteMany({}).catch(() => {});
+
       // Delete ALL users except admins
       const deleted = await prisma.user.deleteMany({
         where: { role: { not: "admin" } },
       });
-
-      // Also clean up related data
-      await prisma.usage.deleteMany({}).catch(() => {});
-      await prisma.contact.deleteMany({}).catch(() => {});
 
       return NextResponse.json({
         success: true,
