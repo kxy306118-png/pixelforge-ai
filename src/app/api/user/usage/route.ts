@@ -69,7 +69,7 @@ export async function GET() {
     console.error("Usage API error:", error);
     return NextResponse.json({
       user: { name: "User", email: "", plan: "free", role: "user" },
-      credits: { used: 0, limit: 5, remaining: 5 },
+      credits: { used: 0, limit: 10, remaining: 10 },
       recentUsages: [],
     });
   }

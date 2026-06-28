@@ -27,7 +27,9 @@ export default function PricingPage() {
   const { t } = useI18n();
 
   const getSubscribeHref = (planId: string) => {
-    if (planId === "free") return "/signup";
+    if (planId === "free") {
+      return session ? "/tools" : "/signup";
+    }
     if (session) return `/billing?plan=${planId}`;
     return `/signup?plan=${planId}`;
   };

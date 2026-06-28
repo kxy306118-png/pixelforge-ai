@@ -45,7 +45,7 @@ export default function AdminPage() {
     </div>
   );
 
-  const planPrices: Record<string, number> = { starter: 4.99, pro: 9.99, unlimited: 19.99 };
+  const planPrices: Record<string, number> = { starter: 9.99, pro: 19.99, unlimited: 29.99 };
   let mrr = 0;
   data.planDistribution.forEach((p) => { mrr += (planPrices[p.plan] || 0) * p._count; });
 

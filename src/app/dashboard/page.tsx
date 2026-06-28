@@ -29,7 +29,7 @@ export default function DashboardPage() {
         .catch(() => {
           setData({
             user: { name: session?.user?.name || "User", email: session?.user?.email || "", plan: (session?.user as any)?.plan || "free", role: (session?.user as any)?.role || "user" },
-            credits: { used: 0, limit: 5, remaining: 5 },
+            credits: { used: 0, limit: 10, remaining: 10 },
             recentUsages: [],
           });
         })
