@@ -4,9 +4,36 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Admin user management — delete non-admin users.
+ * Admin user management — delete non-admin users, verify emails.
  * Only accessible by admins. Self-deletion prevented.
  */
+export async function PATCH(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if ((session.user as any).role !== "admin") {
+      return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+    }
+    const body = await req.json();
+    const { userId, action } = body;
+    if (!userId) {
+      return NextResponse.json({ error: "userId required" }, { status: 400 });
+    }
+    if (action === "verify-email") {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { emailVerified: new Date(), verifyToken: null },
+      });
+      return NextResponse.json({ success: true, message: "Email verified." });
+    }
+    return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Failed" }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
