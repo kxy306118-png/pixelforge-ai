@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAndReserveUsage, finalizeUsage, refundUsage, usageErrorResponse, usageErrorStatus } from "@/lib/usage";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { runReplicateModel } from "@/lib/replicate";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -125,16 +126,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
     }
 
-    const Replicate = (await import("replicate")).default;
-    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-
     const base64 = buffer.toString("base64");
     const dataUri = `data:${imageFile.type};base64,${base64}`;
 
-    const output = await replicate.run(
-      "nightmareai/real-esrgan:b3ef194191d13140337468c916c2c5b96dd0cb06dffc032a022a31807f6a5ea8",
-      { input: { image: dataUri, scale: scaleNum, face_enhance: true } }
-    );
+    const result = await runReplicateModel("nightmareai/real-esrgan", { image: dataUri, scale: scaleNum, face_enhance: true });
+    const output = result.output;
 
     let resultUrl: string;
     if (Array.isArray(output)) {
