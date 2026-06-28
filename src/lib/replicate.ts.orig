@@ -32,7 +32,7 @@ function getClient(): Replicate {
  * @param timeoutMs - max time to wait (default 120s)
  */
 export async function runReplicateModel(
-  modelId: string,
+  modelId: `${string}/${string}`,
   input: Record<string, any>,
   timeoutMs: number = 120000
 ): Promise<ReplicateResult> {
@@ -51,7 +51,7 @@ export async function runReplicateModel(
 
   try {
     // Use model name without version (replicate.run supports owner/name format)
-    const output = await replicate.run(modelId as any, { input });
+    const output = await replicate.run(modelId, { input });
     return { output, status: "succeeded" };
   } catch (error) {
     console.error(`[replicate] ${modelId} failed:`, error);
