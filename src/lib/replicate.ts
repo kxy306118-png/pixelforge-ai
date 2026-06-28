@@ -37,6 +37,7 @@ export async function runReplicateModel(
   // Try with Prefer: wait for sync response (up to ~60s)
   headers["Prefer"] = "wait";
 
+  // Use the model-specific predictions endpoint
   const startResp = await fetch(
     `${REPLICATE_BASE}/models/${modelId}/predictions`,
     {
@@ -45,6 +46,35 @@ export async function runReplicateModel(
       body: JSON.stringify({ input }),
     }
   );
+
+  // If model-specific endpoint fails, try the generic predictions endpoint
+  if (!startResp.ok && startResp.status === 500) {
+    console.log(`[replicate] Retrying with generic predictions endpoint for ${modelId}`);
+    const retryResp = await fetch(`${REPLICATE_BASE}/predictions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ model: modelId, input }),
+    });
+
+    if (retryResp.ok) {
+      const prediction = await retryResp.json();
+      if (prediction.status === "succeeded") {
+        return { output: prediction.output, status: prediction.status };
+      }
+      // Fall through to polling
+      const getResultUrl = prediction.urls?.get || `${REPLICATE_BASE}/predictions/${prediction.id}`;
+      const startTime = Date.now();
+      let p = prediction;
+      while (p.status !== "succeeded" && p.status !== "failed" && p.status !== "canceled") {
+        if (Date.now() - startTime > timeoutMs) throw new Error("AI processing timed out.");
+        await new Promise((r) => setTimeout(r, 2000));
+        const pollResp = await fetch(getResultUrl, { headers: { Authorization: `Bearer ${token}` } });
+        if (pollResp.ok) p = await pollResp.json();
+      }
+      if (p.status === "failed") throw new Error("AI processing failed.");
+      return { output: p.output, status: p.status };
+    }
+  }
 
   if (!startResp.ok) {
     const errText = await startResp.text().catch(() => "");
