@@ -10,8 +10,8 @@ export const runtime = "nodejs";
  * Resilient to DB failures — payment flow always works.
  */
 const PLAN_PRODUCTS: Record<string, string> = {
-  starter: process.env.CREEM_PRODUCT_STARTER || "prod_2yGGGw2iu1SH47Gx3eTEKd",
-  pro: process.env.CREEM_PRODUCT_PRO || "prod_2ct7LjqSrc8jm0FHdBCkME",
+  starter: process.env.CREEM_PRODUCT_STARTER || "prod_2nG2k8uhSIHSFwLAstNoFO",
+  pro: process.env.CREEM_PRODUCT_PRO || "prod_3jVL3w9v9Fhk6MAMDom6IM",
 };
 
 export async function POST(req: NextRequest) {
