@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAndReserveUsage, finalizeUsage, refundUsage, usageErrorResponse, usageErrorStatus } from "@/lib/usage";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { runReplicateModel } from "@/lib/replicate";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -138,13 +139,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "AI service is not configured. Please contact support." }, { status: 503 });
     }
 
-    const Replicate = (await import("replicate")).default;
-    const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN });
-
     const base64 = buffer.toString("base64");
     const dataUri = `data:${imageFile.type};base64,${base64}`;
 
-    const output = await replicate.run("cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003", { input: { image: dataUri } });
+    // Use raw fetch instead of Replicate SDK (avoids version compatibility issues)
+    const result = await runReplicateModel("cjwbw/rembg", { image: dataUri });
+    const output = result.output;
 
     let resultUrl: string;
     if (Array.isArray(output)) {
