@@ -33,8 +33,14 @@ function LoginPageInner() {
         setError("Invalid email or password. Please try again.");
         setLoading(false);
       } else if (result?.ok) {
-        // Session set successfully — do a full page redirect
-        window.location.href = callbackUrl;
+        // Fetch session to check if user is admin
+        try {
+          const s = await fetch("/api/auth/session").then(r => r.json());
+          const targetUrl = s?.user?.role === "admin" ? "/admin" : callbackUrl;
+          window.location.href = targetUrl;
+        } catch {
+          window.location.href = callbackUrl;
+        }
       } else {
         // Unexpected state — try full redirect as fallback
         window.location.href = callbackUrl;
