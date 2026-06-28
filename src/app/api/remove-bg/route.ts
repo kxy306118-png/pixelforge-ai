@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
     if (limited) return limited;
 
     // Atomic check-and-reserve (no race condition)
-    const usageCheck = await checkAndReserveUsage();
+    const usageCheck = await checkAndReserveUsage("remove-bg");
     if (!usageCheck.allowed) {
       return NextResponse.json(usageErrorResponse(usageCheck), { status: usageErrorStatus(usageCheck) });
     }
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid request. Please upload a file." }, { status: 400 });
     }
 
@@ -103,17 +103,17 @@ export async function POST(req: NextRequest) {
     const imageFile = formData.get("image") as File | null;
 
     if (!imageFile) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "No image provided. Please upload an image file." }, { status: 400 });
     }
 
     if (!imageFile.type.startsWith("image/")) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid file type. Please upload an image (PNG, JPG, or WebP)." }, { status: 400 });
     }
 
     if (imageFile.size > MAX_FILE_SIZE) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "File too large. Maximum size is 10MB." }, { status: 400 });
     }
 
@@ -122,19 +122,19 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     if (!isValidImage(buffer)) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid image file. The file appears to be corrupted or not a real image." }, { status: 400 });
     }
 
     // Validate image dimensions from header bytes (no sharp needed)
     const dims = getImageDimensions(buffer);
     if (!dims) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "The uploaded file is not a valid image." }, { status: 400 });
     }
 
     if (!process.env.REPLICATE_API_TOKEN) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "AI service is not configured. Please contact support." }, { status: 503 });
     }
 
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     // Refund on any error if we reserved a credit
     if (reserved && userId) {
-      await refundUsage(userId);
+      await refundUsage(userId, 1);
     }
     const message = error instanceof Error ? error.message : "Failed to remove background";
     console.error("Remove BG error:", error);

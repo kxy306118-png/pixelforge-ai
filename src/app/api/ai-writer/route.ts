@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const limited = rateLimit(req, RATE_LIMITS.ai);
     if (limited) return limited;
 
-    const usage = await checkAndReserveUsage();
+    const usage = await checkAndReserveUsage("ai-writer");
     if (!usage.allowed) {
       const err = usageErrorResponse(usage);
       return NextResponse.json(err, { status: usageErrorStatus(usage) });
@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
 
     const { prompt, tone, language } = await req.json();
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "Please provide a prompt." }, { status: 400 });
     }
 
     const moderation = await moderateContent(prompt, "text");
     if (!moderation.allowed) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: moderation.reason || "Content policy violation." }, { status: 403 });
     }
 

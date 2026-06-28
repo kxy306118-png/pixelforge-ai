@@ -7,11 +7,19 @@ import { plans } from "@/lib/config";
 import { useI18n } from "@/lib/i18n";
 
 const faqs = [
-  { q: "What counts as an AI task?", a: "AI tasks include: Background Removal, Image Upscale, Photo Enhance, and Image Generation. Basic tools (Compress, Convert, Resize) are always free and don't count as AI tasks." },
-  { q: "Is my data safe?", a: "All files are processed in real-time and deleted immediately after. We never store, share, or train on your data." },
+  { q: "What are credits and how do they work?", a: "Credits are used each time you run an AI tool. Different tools cost different credits: Image & Text tools cost 1 credit, Audio tools cost 2 credits, and Video tools cost 5 credits. Basic tools (Compress, Convert, Resize, Enhance) are always free and unlimited." },
+  { q: "Is my data safe?", a: "All files are processed in real-time and deleted immediately after. We never store, share, or train on your data. Free image tools process entirely in your browser — your files never even leave your device." },
   { q: "What formats are supported?", a: "Images: PNG, JPG, WebP, AVIF. Maximum file size varies by plan (10MB for Free, 25MB for Starter, 50MB for Pro)." },
   { q: "Can I cancel anytime?", a: "Yes! Cancel anytime via CREEM's customer portal. You keep access until the end of your billing period." },
-  { q: "How do I contact support?", a: "Go to our Contact page or email 1162093529@qq.com. We typically respond within 24 hours. Pro users get priority support." },
+  { q: "How do I contact support?", a: "Go to our Contact page or email support@pixelforgeai.club. We typically respond within 24 hours. Pro users get priority support." },
+];
+
+const creditTable = [
+  { category: "🆓 Free Tools", cost: "0 credits", tools: "Compress, Convert, Resize, Enhance", note: "Unlimited & runs in your browser" },
+  { category: "🖼️ Image AI Tools", cost: "1 credit each", tools: "Background Removal, Upscale, Image Generation", note: "" },
+  { category: "📝 Text AI Tools", cost: "1 credit each", tools: "OCR (Image to Text), AI Copywriter", note: "" },
+  { category: "🎵 Audio AI Tools", cost: "2 credits each", tools: "Speech to Text, Text to Speech, Audio Enhance, Auto Subtitles", note: "" },
+  { category: "🎬 Video AI Tools", cost: "5 credits each", tools: "Text to Video, Image to Video", note: "Pro plan only" },
 ];
 
 export default function PricingPage() {
@@ -48,6 +56,10 @@ export default function PricingPage() {
               <span className="text-3xl font-black text-[#e8e8f0]">{plan.price}</span>
               <span className="text-sm text-[#8888a0]">{plan.period}</span>
             </div>
+            <div className="mt-2 flex items-center gap-1 text-xs text-violet-400 font-semibold">
+              <Zap className="h-3.5 w-3.5" />
+              {plan.aiCredits} AI credits
+            </div>
             <ul className="mt-6 space-y-3 flex-1">
               {plan.features.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-[#8888a0]">
@@ -61,6 +73,41 @@ export default function PricingPage() {
             </Link>
           </div>
         ))}
+      </div>
+
+      {/* Credit Cost Table */}
+      <div className="max-w-4xl mx-auto mb-16">
+        <h2 className="text-2xl font-black text-center mb-2">Credit Costs per Tool</h2>
+        <p className="text-center text-sm text-[#8888a0] mb-8">Different tools consume different amounts of credits</p>
+        <div className="card overflow-hidden p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#2a2a45] bg-[#0e0e1a]">
+                  <th className="text-left p-4 text-[#8888a0] font-semibold">Category</th>
+                  <th className="text-center p-4 text-violet-400 font-bold whitespace-nowrap">Cost</th>
+                  <th className="text-left p-4 text-[#8888a0] font-semibold">Tools Included</th>
+                </tr>
+              </thead>
+              <tbody className="text-[#8888a0]">
+                {creditTable.map((row, i) => (
+                  <tr key={i} className="border-b border-[#1e1e30]">
+                    <td className="p-4 whitespace-nowrap font-medium text-[#e8e8f0]">{row.category}</td>
+                    <td className="text-center p-4">
+                      <span className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${row.cost === "0 credits" ? "bg-emerald-500/15 text-emerald-400" : "bg-violet-500/15 text-violet-400"}`}>
+                        {row.cost}
+                      </span>
+                    </td>
+                    <td className="p-4 text-xs">
+                      {row.tools}
+                      {row.note && <span className="block mt-1 text-[10px] text-amber-400/80">{row.note}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* Compare */}
@@ -79,11 +126,12 @@ export default function PricingPage() {
               </thead>
               <tbody className="text-[#8888a0]">
                 {[
-                  ["AI Background Removal", "✅ $0.20/img", "❌", "✅ Included"],
-                  ["AI Image Upscale", "❌", "❌", "✅ Included"],
+                  ["AI Background Removal", "✅ $0.20/img", "❌", "✅ 1 credit"],
+                  ["AI Image Upscale", "❌", "❌", "✅ 1 credit"],
+                  ["AI Image Generation", "❌", "❌", "✅ 1 credit"],
                   ["Compress / Convert / Resize", "❌", "✅ Limited", "✅ Free & Unlimited"],
-                  ["All-in-One Toolkit", "❌ BG only", "❌ Compress only", "✅ 5+ tools"],
-                  ["Pro Plan Price", "$9.99/mo", "$25/yr", "$9.99/mo (all tools)"],
+                  ["All-in-One Toolkit", "❌ BG only", "❌ Compress only", "✅ 15+ tools"],
+                  ["Starting Price", "$0.20/use", "$25/yr", "$0 (10 free credits)"],
                 ].map(([feature, col1, col2, col3], i) => (
                   <tr key={i} className="border-b border-[#1e1e30]">
                     <td className="p-4 whitespace-nowrap">{feature}</td>

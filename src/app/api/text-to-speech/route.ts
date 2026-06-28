@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const limited = rateLimit(req, RATE_LIMITS.ai);
     if (limited) return limited;
 
-    const usage = await checkAndReserveUsage();
+    const usage = await checkAndReserveUsage("text-to-speech");
     if (!usage.allowed) {
       const err = usageErrorResponse(usage);
       return NextResponse.json(err, { status: usageErrorStatus(usage) });
@@ -20,13 +20,13 @@ export async function POST(req: NextRequest) {
 
     const { text, voice } = await req.json();
     if (!text || typeof text !== "string" || text.trim().length === 0) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "Please provide text." }, { status: 400 });
     }
 
     const moderation = await moderateContent(text, "text");
     if (!moderation.allowed) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: moderation.reason || "Content policy violation." }, { status: 403 });
     }
 

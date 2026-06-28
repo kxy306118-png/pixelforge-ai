@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const limited = rateLimit(req, RATE_LIMITS.ai);
     if (limited) return limited;
 
-    const usage = await checkAndReserveUsage();
+    const usage = await checkAndReserveUsage("enhance");
     if (!usage.allowed) {
       const err = usageErrorResponse(usage);
       return NextResponse.json(err, { status: usageErrorStatus(usage) });
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const imageFile = formData.get("image") as File | null;
     if (!imageFile) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "No image provided." }, { status: 400 });
     }
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     if (buffer.length > MAX_FILE_SIZE) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "File too large. Max 10MB." }, { status: 400 });
     }
 

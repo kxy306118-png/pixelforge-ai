@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     if (limited) return limited;
 
     // Atomic check-and-reserve
-    const usageCheck = await checkAndReserveUsage();
+    const usageCheck = await checkAndReserveUsage("upscale");
     if (!usageCheck.allowed) {
       return NextResponse.json(usageErrorResponse(usageCheck), { status: usageErrorStatus(usageCheck) });
     }
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const contentType = req.headers.get("content-type") || "";
     if (!contentType.includes("multipart/form-data")) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid request. Please upload a file." }, { status: 400 });
     }
 
@@ -86,21 +86,21 @@ export async function POST(req: NextRequest) {
     const scale = (formData.get("scale") as string) || "2";
 
     if (!imageFile) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "No image provided." }, { status: 400 });
     }
     if (!imageFile.type.startsWith("image/")) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid file type." }, { status: 400 });
     }
     if (imageFile.size > MAX_FILE_SIZE) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "File too large. Max 10MB." }, { status: 400 });
     }
 
     const scaleNum = parseInt(scale);
     if (Number.isNaN(scaleNum) || ![2, 3, 4].includes(scaleNum)) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Scale must be 2, 3, or 4." }, { status: 400 });
     }
 
@@ -109,19 +109,19 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     if (!isValidImage(buffer)) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "Invalid image file." }, { status: 400 });
     }
 
     // Validate dimensions from binary header (no sharp needed)
     const dims = getImageDimensions(buffer);
     if (!dims || !dims.width || !dims.height) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "The uploaded file is not a valid image." }, { status: 400 });
     }
 
     if (!process.env.REPLICATE_API_TOKEN) {
-      await refundUsage(userId!);
+      await refundUsage(userId!, usageCheck.creditsCharged || 1);
       return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
     }
 
@@ -167,7 +167,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     if (reserved && userId) {
-      await refundUsage(userId);
+      await refundUsage(userId, 1);
     }
     const message = error instanceof Error ? error.message : "Failed to upscale image";
     console.error("Upscale error:", error);

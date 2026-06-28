@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const limited = rateLimit(req, RATE_LIMITS.ai);
     if (limited) return limited;
 
-    const usage = await checkAndReserveUsage();
+    const usage = await checkAndReserveUsage("ai-image-gen");
     if (!usage.allowed) {
       const err = usageErrorResponse(usage);
       return NextResponse.json(err, { status: usageErrorStatus(usage) });
@@ -20,17 +20,17 @@ export async function POST(req: NextRequest) {
 
     const { prompt, style } = await req.json();
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "Please provide a prompt." }, { status: 400 });
     }
     if (prompt.length > 1000) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "Prompt too long (max 1000 characters)." }, { status: 400 });
     }
 
     const moderation = await moderateContent(prompt, "text_to_image");
     if (!moderation.allowed) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: moderation.reason || "Content policy violation." }, { status: 403 });
     }
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
     if (!imageUrl) {
-      await refundUsage(usage.userId);
+      await refundUsage(usage.userId, usage.creditsCharged);
       return NextResponse.json({ error: "No image was generated." }, { status: 500 });
     }
 
