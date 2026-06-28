@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       : language === "es" ? "Respond in Spanish."
       : "Respond in English.";
 
-    const result = await runReplicateModel("meta/meta-llama-3.1-8b-instruct", {
+    const result = await runReplicateModel("meta/llama-3.1-8b-instruct", {
       prompt: `${toneInstruction}\n${langInstruction}\n\n${prompt}`,
       max_tokens: 1024,
     });
