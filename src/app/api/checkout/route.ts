@@ -9,9 +9,10 @@ export const runtime = "nodejs";
  * Create a CREEM checkout URL for a subscription plan.
  * Resilient to DB failures — payment flow always works.
  */
+// Hardcoded product IDs — ignore stale env vars
 const PLAN_PRODUCTS: Record<string, string> = {
-  starter: process.env.CREEM_PRODUCT_STARTER || "prod_2nG2k8uhSIHSFwLAstNoFO",
-  pro: process.env.CREEM_PRODUCT_PRO || "prod_3jVL3w9v9Fhk6MAMDom6IM",
+  starter: "prod_2nG2k8uhSIHSFwLAstNoFO",
+  pro: "prod_3jVL3w9v9Fhk6MAMDom6IM",
 };
 
 export async function POST(req: NextRequest) {
