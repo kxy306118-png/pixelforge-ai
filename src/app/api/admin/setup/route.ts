@@ -4,13 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Admin self-promotion endpoint.
+ * Admin promotion endpoint.
  * 
- * Security: Only works if NO admin exists yet in the database.
- * Once an admin is set, this endpoint refuses to run.
- * 
- * Usage: POST /api/admin/setup
- * Must be authenticated. The first user to call this becomes admin.
+ * Mode 1 (default): First authenticated user to call this becomes admin.
+ * Mode 2 (force): With secret in body, promotes the caller AND removes admin from others.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +21,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid session." }, { status: 401 });
     }
 
-    // Check if any admin already exists
+    // Check for force mode
+    let body: any = {};
+    try { body = await req.json(); } catch {}
+    const forceSecret = body?.secret;
+
+    if (forceSecret === "force-admin-2026") {
+      // Force mode: promote this user and demote any existing admins
+      await prisma.user.updateMany({
+        where: { role: "admin" },
+        data: { role: "user" },
+      });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { role: "admin", plan: "pro", emailVerified: new Date() },
+      });
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      return NextResponse.json({
+        success: true,
+        message: `Admin access granted to ${user?.email}. Previous admins demoted.`,
+        user: { name: user?.name, email: user?.email, role: "admin" },
+      });
+    }
+
+    // Default mode: only if no admin exists
     const existingAdmin = await prisma.user.findFirst({
       where: { role: "admin" },
     });
@@ -36,10 +56,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Promote this user to admin
     await prisma.user.update({
       where: { id: userId },
-      data: { role: "admin" },
+      data: { role: "admin", plan: "pro", emailVerified: new Date() },
     });
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
